@@ -43,12 +43,10 @@ and or
 		{token.IDENT, "five", 1, 5},
 		{token.ASSIGN, "=", 1, 10},
 		{token.INT, "5", 1, 12},
-		{token.NEWLINE, "\n", 1, 13},
 		{token.LET, "let", 2, 1},
 		{token.IDENT, "ten", 2, 5},
 		{token.ASSIGN, "=", 2, 9},
 		{token.INT, "10", 2, 11},
-		{token.NEWLINE, "\n", 2, 13},
 		{token.FUNCTION, "fn", 3, 1},
 		{token.IDENT, "add", 3, 4},
 		{token.LPAREN, "(", 3, 8},
@@ -56,13 +54,10 @@ and or
 		{token.IDENT, "y", 3, 11},
 		{token.RPAREN, ")", 3, 12},
 		{token.LBRACE, "{", 3, 14},
-		{token.NEWLINE, "\n", 3, 15},
 		{token.IDENT, "x", 4, 2},
 		{token.PLUS, "+", 4, 4},
 		{token.IDENT, "y", 4, 6},
-		{token.NEWLINE, "\n", 4, 7},
 		{token.RBRACE, "}", 5, 1},
-		{token.NEWLINE, "\n", 5, 2},
 		{token.LET, "let", 6, 1},
 		{token.IDENT, "result", 6, 5},
 		{token.ASSIGN, "=", 6, 12},
@@ -71,70 +66,53 @@ and or
 		{token.IDENT, "x", 6, 18},
 		{token.IDENT, "y", 6, 20},
 		{token.RPAREN, ")", 6, 21},
-		{token.NEWLINE, "\n", 6, 22},
 		{token.BANG, "!", 7, 1},
 		{token.INT, "5", 7, 2},
 		{token.LT, "<", 7, 3},
 		{token.GT, ">", 7, 4},
 		{token.INT, "10", 7, 5},
-		{token.NEWLINE, "\n", 7, 7},
 		{token.IF, "if", 8, 1},
 		{token.INT, "5", 8, 4},
 		{token.LT, "<", 8, 6},
 		{token.INT, "10", 8, 8},
 		{token.LBRACE, "{", 8, 11},
-		{token.NEWLINE, "\n", 8, 12},
 		{token.RETURN, "return", 9, 2},
 		{token.TRUE, "true", 9, 9},
-		{token.NEWLINE, "\n", 9, 13},
 		{token.RBRACE, "}", 10, 1},
 		{token.ELSE, "else", 10, 3},
 		{token.LBRACE, "{", 10, 8},
-		{token.NEWLINE, "\n", 10, 9},
 		{token.RETURN, "return", 11, 2},
 		{token.FALSE, "false", 11, 9},
-		{token.NEWLINE, "\n", 11, 14},
 		{token.RBRACE, "}", 12, 1},
-		{token.NEWLINE, "\n", 12, 2},
 		{token.INT, "4", 13, 1},
 		{token.LTE, "<=", 13, 3},
 		{token.INT, "5", 13, 6},
 		{token.GTE, ">=", 13, 8},
 		{token.INT, "3", 13, 11},
-		{token.NEWLINE, "\n", 13, 12},
 		{token.INT, "5", 14, 1},
 		{token.EQ, "==", 14, 3},
 		{token.INT, "5", 14, 6},
-		{token.NEWLINE, "\n", 14, 7},
 		{token.INT, "5", 15, 1},
 		{token.NEQ, "!=", 15, 3},
 		{token.INT, "9", 15, 6},
-		{token.NEWLINE, "\n", 15, 7},
 		{token.INT, "2", 16, 1},
 		{token.POW, "**", 16, 3},
 		{token.INT, "3", 16, 6},
-		{token.NEWLINE, "\n", 16, 7},
 		{token.ASTERISK, "*", 17, 1},
 		{token.SLASH, "/", 17, 2},
-		{token.NEWLINE, "\n", 17, 3},
 		{token.INT, "2", 18, 1},
 		{token.PIPE, "|>", 18, 3},
 		{token.IDENT, "add", 18, 6},
 		{token.LPAREN, "(", 18, 9},
 		{token.INT, "3", 18, 10},
 		{token.RPAREN, ")", 18, 11},
-		{token.NEWLINE, "\n", 18, 12},
 		{token.AND, "and", 19, 1},
 		{token.OR, "or", 19, 5},
-		{token.NEWLINE, "\n", 19, 7},
 		{token.ATOM, ":ok", 20, 1},
-		{token.NEWLINE, "\n", 20, 4},
 		{token.LBRACKET, "[", 21, 1},
 		{token.RBRACKET, "]", 21, 2},
 		{token.MOD, "%", 21, 3},
-		{token.NEWLINE, "\n", 21, 4},
 		{token.FLOAT, "3.14", 22, 1},
-		{token.NEWLINE, "\n", 22, 5},
 		{token.EOF, "", 23, 1},
 	}
 
@@ -163,5 +141,20 @@ and or
 			t.Fatalf("tests[%d] - column wrong. expected=%d, got=%d",
 				i, tt.expectedColumn, tok.Column)
 		}
+	}
+}
+
+func Test0Floats(t *testing.T) {
+	input := `0.14`
+
+	l := New(input)
+	tok := l.NextToken()
+	fmt.Printf("Token: %v", tok)
+	if tok.Type != token.FLOAT {
+		t.Fatalf("expected float, got %v", tok.Type)
+	}
+
+	if tok.Literal != "0.14" {
+		t.Fatalf("expected 0.14, got %v", tok.Literal)
 	}
 }
