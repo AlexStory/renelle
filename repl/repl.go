@@ -3,10 +3,11 @@ package repl
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
-	"renelle/lexer" // replace with the path to your lexer package
-	"renelle/token"
+	"renelle/lexer"
+	"renelle/parser"
 )
 
 func Start() {
@@ -21,9 +22,21 @@ func Start() {
 
 		line := scanner.Text()
 		l := lexer.New(line)
+		p := parser.New(l)
 
-		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Printf("%+v\n", tok)
+		program := p.ParseProgram()
+
+		if len(p.Errors()) != 0 {
+			printParserErrors(os.Stdout, p.Errors())
+			continue
 		}
+
+		fmt.Println(program.String())
+	}
+}
+
+func printParserErrors(out io.Writer, errors []parser.ParseError) {
+	for _, msg := range errors {
+		io.WriteString(out, "\t"+msg.Message+"\n")
 	}
 }
