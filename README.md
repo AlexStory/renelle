@@ -25,6 +25,12 @@ fn add(x y) {
 add(2 3)
 ```
 
+`\` and `=>` are used for lambda functions, like so.
+
+```
+map(list, \x => x + 1)
+```
+
 ### Conditionals
 
 Simple `if` and `else` keywords, no parens, with a `{}` block.
@@ -197,3 +203,4 @@ fn add(x y) {
     x + y
 }
 ```
+

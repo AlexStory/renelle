@@ -1,24 +1,20 @@
-// repl/repl.go
-
 package repl
 
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"renelle/lexer"
+	"os"
+
+	"renelle/lexer" // replace with the path to your lexer package
 	"renelle/token"
 )
 
-const PROMPT = ">> "
-
-func Start(in io.Reader, out io.Writer) {
-	scanner := bufio.NewScanner(in)
+func Start() {
+	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
-		fmt.Fprintf(out, PROMPT)
+		fmt.Print(">> ")
 		scanned := scanner.Scan()
-
 		if !scanned {
 			return
 		}
@@ -27,7 +23,7 @@ func Start(in io.Reader, out io.Writer) {
 		l := lexer.New(line)
 
 		for tok := l.NextToken(); tok.Type != token.EOF; tok = l.NextToken() {
-			fmt.Fprintf(out, "%+v\n", tok)
+			fmt.Printf("%+v\n", tok)
 		}
 	}
 }

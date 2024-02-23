@@ -26,7 +26,13 @@ func New(input string) *Lexer {
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
-	l.skipWhitespace()
+	for {
+		l.skipWhitespace()
+		l.skipComments()
+		if l.ch != ' ' && l.ch != '#' {
+			break
+		}
+	}
 
 	switch l.ch {
 	case '=':
@@ -36,6 +42,12 @@ func (l *Lexer) NextToken() token.Token {
 			l.readChar()
 			literal := string(ch) + string(l.ch)
 			tok = token.Token{Type: token.EQ, Literal: literal, Line: l.line, Column: col}
+		} else if l.getNextChar() == '>' {
+			ch := l.ch
+			col := l.column
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{Type: token.ARROW, Literal: literal, Line: l.line, Column: col}
 		} else {
 			tok = newToken(token.ASSIGN, l.ch, l.line, l.column)
 		}
@@ -45,6 +57,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.MINUS, l.ch, l.line, l.column)
 	case '/':
 		tok = newToken(token.SLASH, l.ch, l.line, l.column)
+	case '\\':
+		tok = newToken(token.BACKSLASH, l.ch, l.line, l.column)
 	case '%':
 		tok = newToken(token.MOD, l.ch, l.line, l.column)
 	case '*':
@@ -125,7 +139,11 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Line = l.line
 			tok.Column = l.column
 			tok.Literal = l.readIdentifier()
-			tok.Type = token.LookupIdent(tok.Literal)
+			if l.ch == '(' {
+				tok.Type = token.FUNCCALL
+			} else {
+				tok.Type = token.LookupIdent(tok.Literal)
+			}
 			return tok
 		} else if isDigit(l.ch, l.getPrevChar(), l.getNextChar()) {
 			tok.Line = l.line
@@ -163,6 +181,25 @@ func (l *Lexer) readChar() {
 		l.column++
 	}
 
+}
+
+func (l *Lexer) skipComments() {
+	if l.ch == '#' {
+		for l.ch != '\n' && l.ch != 0 {
+			l.readChar()
+		}
+
+		if l.ch != 0 {
+			l.readChar()
+		}
+	}
+}
+
+func (l *Lexer) peekChar() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPosition]
 }
 
 func (l *Lexer) skipWhitespace() {
