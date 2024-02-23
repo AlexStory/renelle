@@ -8,11 +8,13 @@ import (
 
 	"renelle/evaluator"
 	"renelle/lexer"
+	"renelle/object"
 	"renelle/parser"
 )
 
 func Start() {
 	scanner := bufio.NewScanner(os.Stdin)
+	env := object.NewEnvironment()
 
 	for {
 		fmt.Print(">> ")
@@ -32,7 +34,7 @@ func Start() {
 			continue
 		}
 
-		evaluated := evaluator.Eval(program)
+		evaluated := evaluator.Eval(program, env)
 
 		if evaluated != nil {
 			io.WriteString(os.Stdout, evaluated.Inspect())

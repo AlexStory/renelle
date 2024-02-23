@@ -31,7 +31,7 @@ and or
 :ok
 []%
 3.14
-\->
+\=>
 `
 
 	tests := []struct {
@@ -115,7 +115,7 @@ and or
 		{token.MOD, "%", 21, 3},
 		{token.FLOAT, "3.14", 22, 1},
 		{token.BACKSLASH, "\\", 23, 1},
-		{token.ARROW, "->", 23, 2},
+		{token.ARROW, "=>", 23, 2},
 		{token.EOF, "", 24, 1},
 	}
 
@@ -295,6 +295,43 @@ fn subtract x y { # comment at end of line
 		if tok.Column != tt.expectedColumn {
 			t.Fatalf("tests[%d] - column number wrong. expected=%d, got=%d",
 				i, tt.expectedColumn, tok.Column)
+		}
+	}
+}
+
+func TestUnderscoreInInteger(t *testing.T) {
+	input := `123_456 78_90`
+
+	l := New(input)
+
+	tests := []struct {
+		expectedType    token.TokenType
+		expectedLiteral string
+		expectedLine    int
+		expectedColumn  int
+	}{
+		{token.INT, "123456", 1, 1},
+		{token.INT, "7890", 1, 9},
+		{token.EOF, "", 1, 14},
+	}
+
+	for i, tt := range tests {
+		tok := l.NextToken()
+
+		if tok.Type != tt.expectedType {
+			t.Fatalf("tests[%d] - tokentype wrong. expected=%q, got=%q", i, tt.expectedType, tok.Type)
+		}
+
+		if tok.Literal != tt.expectedLiteral {
+			t.Fatalf("tests[%d] - literal wrong. expected=%q, got=%q", i, tt.expectedLiteral, tok.Literal)
+		}
+
+		if tok.Line != tt.expectedLine {
+			t.Fatalf("tests[%d] - line number wrong. expected=%d, got=%d", i, tt.expectedLine, tok.Line)
+		}
+
+		if tok.Column != tt.expectedColumn {
+			t.Fatalf("tests[%d] - column number wrong. expected=%d, got=%d", i, tt.expectedColumn, tok.Column)
 		}
 	}
 }

@@ -14,6 +14,8 @@ import (
 const (
 	_ int = iota
 	LOWEST
+	OR          // or
+	AND         // and
 	EQUALS      // ==
 	LESSGREATER // > or <
 	SUM         // +
@@ -39,6 +41,8 @@ var precedences = map[token.TokenType]int{
 	token.PIPE:     CALL,
 	token.LPAREN:   CALL,
 	token.FUNCCALL: CALL,
+	token.OR:       OR,
+	token.AND:      AND,
 }
 
 type (
@@ -94,6 +98,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.MOD, p.parseInfixExpression)
 	p.registerInfix(token.POW, p.parseInfixExpression)
 	p.registerInfix(token.PIPE, p.parseInfixExpression)
+	p.registerInfix(token.AND, p.parseInfixExpression)
+	p.registerInfix(token.OR, p.parseInfixExpression)
 
 	p.nextToken()
 	p.nextToken()
@@ -158,9 +164,9 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		return nil
 	}
 
-	p.parseExpression(LOWEST)
-
 	p.nextToken()
+
+	stmt.Value = p.parseExpression(LOWEST)
 
 	return stmt
 }
@@ -170,7 +176,7 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 
 	p.nextToken()
 
-	p.parseExpression(LOWEST)
+	stmt.ReturnValue = p.parseExpression(LOWEST)
 
 	return stmt
 }
@@ -425,6 +431,11 @@ func (p *Parser) parseCallExpression() ast.Expression {
 
 	p.nextToken()
 	p.nextToken()
+
+	if p.curTokenIs(token.RPAREN) {
+		exp.Arguments = []ast.Expression{}
+		return exp
+	}
 	exp.Arguments = p.parseCallArguments()
 	return exp
 }
@@ -432,16 +443,12 @@ func (p *Parser) parseCallExpression() ast.Expression {
 func (p *Parser) parseCallArguments() []ast.Expression {
 	args := []ast.Expression{}
 
-	if p.peekTokenIs(token.RPAREN) {
-		p.nextToken()
-		return args
-	}
-
-	args = append(args, p.parseExpression(LOWEST))
-
-	for !p.peekTokenIs(token.RPAREN) && !p.peekTokenIs(token.EOF) {
-		p.nextToken()
+	for {
 		args = append(args, p.parseExpression(LOWEST))
+		if p.peekTokenIs(token.RPAREN) || p.peekTokenIs(token.EOF) {
+			break
+		}
+		p.nextToken() // Move to the next argument
 	}
 
 	if !p.expectPeek(token.RPAREN) {

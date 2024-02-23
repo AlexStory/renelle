@@ -220,6 +220,10 @@ func isDigit(ch byte, prevChar byte, nextChar byte) bool {
 	if ch == '.' && isDigit(prevChar, 0, 0) && isDigit(nextChar, 0, 0) {
 		return true
 	}
+	if ch == '_' {
+		// If the previous character is not a digit, then '_' is the first character of the number
+		return prevChar >= '0' && prevChar <= '9'
+	}
 	return ch >= '0' && ch <= '9'
 }
 
