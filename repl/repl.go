@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"renelle/evaluator"
 	"renelle/lexer"
 	"renelle/parser"
 )
@@ -31,7 +32,12 @@ func Start() {
 			continue
 		}
 
-		fmt.Println(program.String())
+		evaluated := evaluator.Eval(program)
+
+		if evaluated != nil {
+			io.WriteString(os.Stdout, evaluated.Inspect())
+			io.WriteString(os.Stdout, "\n")
+		}
 	}
 }
 
