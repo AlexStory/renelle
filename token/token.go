@@ -22,6 +22,7 @@ const (
 	RETURN    = "RETURN"
 	INT       = "INT"
 	FLOAT     = "FLOAT"
+	STRING    = "STRING"
 	AND       = "AND"
 	OR        = "OR"
 	ASSIGN    = "="

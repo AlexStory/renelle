@@ -134,6 +134,12 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Type = token.EOF
 		tok.Line = l.line
 		tok.Column = l.column
+
+	case '"':
+		tok.Line = l.line
+		tok.Column = l.column
+		tok.Type = token.STRING
+		tok.Literal = l.readString()
 	default:
 		if isLetter(l.ch) {
 			tok.Line = l.line
@@ -263,6 +269,17 @@ func (l *Lexer) readIdentifier() string {
 	position := l.position
 	for isLetter(l.ch) {
 		l.readChar()
+	}
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) readString() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '"' || l.ch == 0 {
+			break
+		}
 	}
 	return l.input[position:l.position]
 }

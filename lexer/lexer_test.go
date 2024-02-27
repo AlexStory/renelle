@@ -32,6 +32,8 @@ and or
 []%
 3.14
 \=>
+"foobar"
+"foo bar"
 `
 
 	tests := []struct {
@@ -116,7 +118,9 @@ and or
 		{token.FLOAT, "3.14", 22, 1},
 		{token.BACKSLASH, "\\", 23, 1},
 		{token.ARROW, "=>", 23, 2},
-		{token.EOF, "", 24, 1},
+		{token.STRING, "foobar", 24, 1},
+		{token.STRING, "foo bar", 25, 1},
+		{token.EOF, "", 26, 1},
 	}
 
 	l := New(input)
