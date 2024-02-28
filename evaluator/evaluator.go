@@ -13,13 +13,13 @@ import (
 var (
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}
-	NIL   = &object.Atom{Value: ":nil"}
-	OK    = &object.Atom{Value: ":ok"}
+	NIL   = &object.Atom{Value: "nil"}
+	OK    = &object.Atom{Value: "ok"}
 )
 
 var atoms = map[string]*object.Atom{
-	":nil": NIL,
-	":ok":  OK,
+	"nil": NIL,
+	"ok":  OK,
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -50,7 +50,19 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
-		env.Set(node.Name.Value, val)
+		switch left := node.Left.(type) {
+		case *ast.Identifier:
+			if left.Value != "_" {
+				env.Set(left.Value, val)
+			}
+		case *ast.TupleLiteral:
+			return handleTupleDestructuring(left, val, env, node.Token.Line, node.Token.Column)
+		case *ast.ArrayLiteral:
+			return handleArrayDestructuring(left, val, env, node.Token.Line, node.Token.Column)
+		default:
+			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
+		}
+		return OK
 
 	// expressions
 	case *ast.IntegerLiteral:
@@ -62,10 +74,24 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+		return &object.Array{Elements: elements}
+
+	case *ast.TupleLiteral:
+		elements := evalExpressions(node.Elements, env)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+		return &object.Tuple{Elements: elements}
+
 	case *ast.Boolean:
 		return nativeBoolToBooleanObject(node.Value)
 
-	case *ast.AtomExpression:
+	case *ast.AtomLiteral:
 		return getOrCreateAtom(node.Value)
 
 	case *ast.Identifier:
@@ -106,6 +132,19 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		body := node.Body
 		return &object.Function{Parameters: params, Body: body, Env: env}
 
+	case *ast.IndexExpression:
+		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
+
+		index := Eval(node.Index, env)
+		if isError(index) {
+			return index
+		}
+
+		return evalIndexExpression(left, index, node.Token.Line, node.Token.Column)
+
 	case *ast.CallExpression:
 		function := Eval(node.Function, env)
 		if isError(function) {
@@ -135,6 +174,64 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 	}
 
 	return result
+}
+
+func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *object.Environment, line, col int) object.Object {
+	tupleObject, ok := val.(*object.Tuple)
+	if !ok {
+		return newError(line, col, "right-hand side of assignment is not a tuple")
+	}
+	if len(tuple.Elements) != len(tupleObject.Elements) {
+		return newError(line, col, "cannot destructure tuple: size mismatch")
+	}
+	for i, el := range tuple.Elements {
+		switch el := el.(type) {
+		case *ast.Identifier:
+			if el.Value == "_" {
+				continue
+			}
+			env.Set(el.Value, tupleObject.Elements[i])
+		default:
+			leftVal := Eval(el, env)
+			if isError(leftVal) {
+				return leftVal
+			}
+			if !objectEquals(leftVal, tupleObject.Elements[i]) {
+				tok := tuple.Elements[i]
+				return newError(tok.T().Line, tok.T().Column, "cannot destructure tuple: value mismatch")
+			}
+		}
+	}
+	return OK
+}
+
+func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *object.Environment, line, col int) object.Object {
+	arrayObject, ok := val.(*object.Array)
+	if !ok {
+		return newError(line, col, "right-hand side of assignment is not an array")
+	}
+	if len(array.Elements) != len(arrayObject.Elements) {
+		return newError(line, col, "cannot destructure array: size mismatch")
+	}
+	for i, el := range array.Elements {
+		switch el := el.(type) {
+		case *ast.Identifier:
+			if el.Value == "_" {
+				continue
+			}
+			env.Set(el.Value, arrayObject.Elements[i])
+		default:
+			leftVal := Eval(el, env)
+			if isError(leftVal) {
+				return leftVal
+			}
+			if !objectEquals(leftVal, arrayObject.Elements[i]) {
+				tok := array.Elements[i]
+				return newError(tok.T().Line, tok.T().Column, "cannot destructure array: value mismatch")
+			}
+		}
+	}
+	return OK
 }
 
 func applyFunction(fn object.Object, args []object.Object, line, col int) object.Object {
@@ -199,6 +296,55 @@ func evalBlockStatements(stmts []ast.Statement, env *object.Environment) object.
 
 	return result
 
+}
+
+func evalIndexExpression(left, index object.Object, line, col int) object.Object {
+	switch {
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalArrayIndexExpression(left, index, line, col)
+	case left.Type() == object.STRING_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalStringIndexExpression(left, index, line, col)
+	case left.Type() == object.TUPLE_OBJ && index.Type() == object.INTEGER_OBJ:
+		return evalTupleIndexExpression(left, index, line, col)
+	default:
+		return newError(line, col, "index operator not supported: %s", left.Type())
+	}
+}
+
+func evalArrayIndexExpression(array, index object.Object, line, col int) object.Object {
+	arrayObject := array.(*object.Array)
+	idx := index.(*object.Integer).Value
+	max := int64(len(arrayObject.Elements) - 1)
+
+	if idx < 0 || idx > max {
+		return NIL
+	}
+
+	return arrayObject.Elements[idx]
+}
+
+func evalTupleIndexExpression(tuple, index object.Object, line, col int) object.Object {
+	tupleObject := tuple.(*object.Tuple)
+	idx := index.(*object.Integer).Value
+	max := int64(len(tupleObject.Elements) - 1)
+
+	if idx < 0 || idx > max {
+		return NIL
+	}
+
+	return tupleObject.Elements[idx]
+}
+
+func evalStringIndexExpression(str, index object.Object, line, col int) object.Object {
+	strObject := str.(*object.String)
+	idx := index.(*object.Integer).Value
+	max := int64(len(strObject.Value) - 1)
+
+	if idx < 0 || idx > max {
+		return NIL
+	}
+
+	return &object.String{Value: string(strObject.Value[idx])}
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
@@ -404,4 +550,51 @@ func isError(obj object.Object) bool {
 		return obj.Type() == object.ERROR_OBJ
 	}
 	return false
+}
+
+func objectEquals(a, b object.Object) bool {
+	switch a := a.(type) {
+	case *object.Integer:
+		b, ok := b.(*object.Integer)
+		return ok && a.Value == b.Value
+	case *object.Float:
+		b, ok := b.(*object.Float)
+		return ok && a.Value == b.Value
+	case *object.String:
+		b, ok := b.(*object.String)
+		return ok && a.Value == b.Value
+	case *object.Boolean:
+		b, ok := b.(*object.Boolean)
+		return ok && a.Value == b.Value
+	case *object.Atom:
+		b, ok := b.(*object.Atom)
+		return ok && a.Value == b.Value
+	case *object.ReturnValue:
+		b, ok := b.(*object.ReturnValue)
+		return ok && objectEquals(a.Value, b.Value)
+	case *object.Array:
+		b, ok := b.(*object.Array)
+		if !ok || len(a.Elements) != len(b.Elements) {
+			return false
+		}
+		for i, el := range a.Elements {
+			if !objectEquals(el, b.Elements[i]) {
+				return false
+			}
+		}
+		return true
+	case *object.Tuple:
+		b, ok := b.(*object.Tuple)
+		if !ok || len(a.Elements) != len(b.Elements) {
+			return false
+		}
+		for i, el := range a.Elements {
+			if !objectEquals(el, b.Elements[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }

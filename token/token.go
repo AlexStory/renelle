@@ -34,6 +34,7 @@ const (
 	ASTERISK  = "*"
 	MOD       = "%"
 	SLASH     = "/"
+	AT        = "@"
 	BACKSLASH = "\\"
 	ARROW     = "=>"
 	EQ        = "=="

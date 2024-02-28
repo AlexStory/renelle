@@ -21,6 +21,8 @@ const (
 	ERROR_OBJ        = "ERROR"
 	FUNCTION_OBJ     = "FUNCTION"
 	BUILTIN_OBJ      = "BUILTIN"
+	ARRAY_OBJ        = "ARRAY"
+	TUPLE_OBJ        = "TUPLE"
 )
 
 type Object interface {
@@ -60,7 +62,7 @@ type Atom struct {
 	Value string
 }
 
-func (a *Atom) Inspect() string  { return a.Value }
+func (a *Atom) Inspect() string  { return ":" + a.Value }
 func (a *Atom) Type() ObjectType { return ATOM_OBJ }
 
 type ReturnValue struct {
@@ -116,3 +118,43 @@ type Builtin struct {
 
 func (b *Builtin) Inspect() string  { return "builtin function" }
 func (b *Builtin) Type() ObjectType { return BUILTIN_OBJ }
+
+type Array struct {
+	Elements []Object
+}
+
+func (ao *Array) Type() ObjectType { return ARRAY_OBJ }
+func (ao *Array) Inspect() string {
+	var out bytes.Buffer
+
+	elements := []string{}
+	for _, el := range ao.Elements {
+		elements = append(elements, el.Inspect())
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, " "))
+	out.WriteString("]")
+
+	return out.String()
+}
+
+type Tuple struct {
+	Elements []Object
+}
+
+func (to *Tuple) Type() ObjectType { return TUPLE_OBJ }
+func (to *Tuple) Inspect() string {
+	var out bytes.Buffer
+
+	elements := []string{}
+	for _, el := range to.Elements {
+		elements = append(elements, el.Inspect())
+	}
+
+	out.WriteString("(")
+	out.WriteString(strings.Join(elements, " "))
+	out.WriteString(")")
+
+	return out.String()
+}

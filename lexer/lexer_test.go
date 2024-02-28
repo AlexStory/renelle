@@ -34,6 +34,8 @@ and or
 \=>
 "foobar"
 "foo bar"
+[1 2] @ 0
+dog:
 `
 
 	tests := []struct {
@@ -111,7 +113,7 @@ and or
 		{token.RPAREN, ")", 18, 11},
 		{token.AND, "and", 19, 1},
 		{token.OR, "or", 19, 5},
-		{token.ATOM, ":ok", 20, 1},
+		{token.ATOM, "ok", 20, 1},
 		{token.LBRACKET, "[", 21, 1},
 		{token.RBRACKET, "]", 21, 2},
 		{token.MOD, "%", 21, 3},
@@ -120,7 +122,14 @@ and or
 		{token.ARROW, "=>", 23, 2},
 		{token.STRING, "foobar", 24, 1},
 		{token.STRING, "foo bar", 25, 1},
-		{token.EOF, "", 26, 1},
+		{token.LBRACKET, "[", 26, 1},
+		{token.INT, "1", 26, 2},
+		{token.INT, "2", 26, 4},
+		{token.RBRACKET, "]", 26, 5},
+		{token.AT, "@", 26, 7},
+		{token.INT, "0", 26, 9},
+		{token.ATOM, "dog", 27, 1},
+		{token.EOF, "", 28, 1},
 	}
 
 	l := New(input)

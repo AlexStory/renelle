@@ -61,13 +61,14 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	if letStmt.Name.Value != name {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
+	ident, _ := letStmt.Left.(*ast.Identifier)
+	if ident.Value != name {
+		t.Errorf("letStmt.Left.Value not '%s'. got=%s", name, ident.Value)
 		return false
 	}
 
-	if letStmt.Name.TokenLiteral() != name {
-		t.Errorf("s.Name.TokenLiteral not '%s'. got=%s", name, letStmt.Name.TokenLiteral())
+	if ident.TokenLiteral() != name {
+		t.Errorf("s.Ident.TokenLiteral not '%s'. got=%s", name, ident.TokenLiteral())
 		return false
 	}
 
@@ -368,7 +369,14 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		{"(5 + 5) * 2", "((5 + 5) * 2)"},
 		{"2 / (5 + 5)", "(2 / (5 + 5))"},
 		{"-(5 + 5)", "(-(5 + 5))"},
-		{"!(true == true)", "(!(true == true))"},
+		{
+			"a * ([1 2 3 4] @ b * c) * d",
+			"((a * ([1 2 3 4] @ (b * c))) * d)",
+		},
+		{
+			"add(a * b@2 b@1 2 * [1, 2]@1)",
+			"add((a * (b @ 2)) (b @ 1) (2 * ([1 2] @ 1)))",
+		}, {"!(true == true)", "(!(true == true))"},
 	}
 
 	for _, tt := range tests {
@@ -758,13 +766,13 @@ func TestAtomExpressionParsing(t *testing.T) {
 			program.Statements[0])
 	}
 
-	atom, ok := stmt.Expression.(*ast.AtomExpression)
+	atom, ok := stmt.Expression.(*ast.AtomLiteral)
 	if !ok {
 		t.Fatalf("stmt.Expression is not ast.AtomExpression. got=%T",
 			stmt.Expression)
 	}
 
-	if atom.Value != ":ok" {
+	if atom.Value != "ok" {
 		t.Errorf("atom.Value not %s. got=%s", "ok", atom.Value)
 	}
 }
@@ -939,5 +947,93 @@ func TestStringLiteralExpression(t *testing.T) {
 
 	if literal.Value != "hello world" {
 		t.Errorf("literal.Value not %q. got=%q", "hello world", literal.Value)
+	}
+}
+
+func TestParsingArrayLiterals(t *testing.T) {
+	input := "[1 2 * 2 3 + 3]"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, _ := program.Statements[0].(*ast.ExpressionStatement)
+	array, ok := stmt.Expression.(*ast.ArrayLiteral)
+	if !ok {
+		t.Fatalf("exp not ast.ArrayLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(array.Elements) != 3 {
+		t.Fatalf("len(array.Elements) not 3. got=%d", len(array.Elements))
+	}
+
+	testIntegerLiteral(t, array.Elements[0], 1)
+	testInfixExpression(t, array.Elements[1], 2, "*", 2)
+	testInfixExpression(t, array.Elements[2], 3, "+", 3)
+}
+
+func TestParsingIndexExpressions(t *testing.T) {
+	input := "myArray @ 1 + 1"
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, _ := program.Statements[0].(*ast.ExpressionStatement)
+	indexExp, ok := stmt.Expression.(*ast.IndexExpression)
+	if !ok {
+		t.Fatalf("exp not *ast.IndexExpression. got=%T", stmt.Expression)
+	}
+
+	if !testIdentifier(t, indexExp.Left, "myArray") {
+		return
+	}
+
+	if !testInfixExpression(t, indexExp.Index, 1, "+", 1) {
+		return
+	}
+}
+
+func TestParsingTuples(t *testing.T) {
+	input := "(1 2 3 4 5)"
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	tuple, ok := stmt.Expression.(*ast.TupleLiteral)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.TupleLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(tuple.Elements) != 5 {
+		t.Fatalf("tuple does not contain %d elements. got=%d",
+			5, len(tuple.Elements))
+	}
+
+	for i, elem := range tuple.Elements {
+		integer, ok := elem.(*ast.IntegerLiteral)
+		if !ok {
+			t.Fatalf("tuple.Elements[%d] is not ast.IntegerLiteral. got=%T", i, elem)
+		}
+
+		if integer.Value != int64(i+1) {
+			t.Errorf("integer.Value is not %d. got=%d", i+1, integer.Value)
+		}
 	}
 }

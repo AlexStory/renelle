@@ -176,8 +176,8 @@ func TestEvalAtomExpression(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{":foo", ":foo"},
-		{":bar", ":bar"},
+		{":foo", "foo"},
+		{":bar", "bar"},
 	}
 
 	for _, tt := range tests {
@@ -494,5 +494,174 @@ func TestBuiltinFunctions(t *testing.T) {
 					expected, errObj.Message)
 			}
 		}
+	}
+}
+
+func TestArrayLiterals(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	evaluated := testEval(input)
+	result, ok := evaluated.(*object.Array)
+	if !ok {
+		t.Fatalf("object is not Array. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if len(result.Elements) != 3 {
+		t.Fatalf("array has wrong num of elements. got=%d",
+			len(result.Elements))
+	}
+
+	testIntegerObject(t, result.Elements[0], 1)
+	testIntegerObject(t, result.Elements[1], 4)
+	testIntegerObject(t, result.Elements[2], 6)
+}
+
+func TestArrayIndexExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			"[1, 2, 3]@0",
+			1,
+		},
+		{
+			"[1, 2, 3]@1",
+			2,
+		},
+		{
+			"[1, 2, 3]@2",
+			3,
+		},
+		{
+			"let i = 0 [1]@i",
+			1,
+		},
+		{
+			"[1, 2, 3]@1 + 1",
+			3,
+		},
+		{
+			"let myArray = [1, 2, 3] myArray@2",
+			3,
+		},
+		{
+			"let myArray = [1 2 3] (myArray@0) + (myArray@1) + (myArray@2)",
+			6,
+		},
+		{
+			"let myArray = [1, 2, 3] let i = myArray@0 myArray@i",
+			2,
+		},
+		{
+			"[1, 2, 3]@3",
+			nil,
+		},
+		{
+			"[1, 2, 3]@-1",
+			nil,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNilObject(t, evaluated)
+		}
+	}
+}
+
+func TestEvalTuples(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"(1 2 3)", "(1 2 3)"},
+		{"(1 + 2 3 * 4 5)", "(3 12 5)"},
+		{"(1 (2 3) 4)", "(1 (2 3) 4)"},
+		{"let a = 5 (a a + 1)", "(5 6)"},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		tuple, ok := evaluated.(*object.Tuple)
+		if !ok {
+			t.Fatalf("object is not Tuple. got=%T (%+v)", evaluated, evaluated)
+		}
+
+		if tuple.Inspect() != tt.expected {
+			t.Errorf("expected=%q, got=%q", tt.expected, tuple.Inspect())
+		}
+	}
+}
+
+func TestArrayDestructuring(t *testing.T) {
+	// Test successful destructuring
+	result := testEval("let [x, y] = [1, 2]; x + y")
+	if resultIns, ok := result.(*object.Integer); ok {
+		if resultIns.Value != 3 {
+			t.Errorf("Expected 3, got %v", resultIns.Value)
+		}
+	} else {
+		t.Errorf("Expected no error, got %v", result)
+	}
+
+	// Test destructuring with discards
+	result = testEval("let [_, y] = [1, 2]; y")
+	if resultIns, ok := result.(*object.Integer); ok {
+		if resultIns.Value != 2 {
+			t.Errorf("Expected 2, got %v", resultIns.Value)
+		}
+	} else {
+		t.Errorf("Expected no error, got %v", result)
+	}
+
+	// Test mismatched length
+	result = testEval("let [x, y] = [1]; x + y")
+	if _, ok := result.(*object.Error); !ok {
+		t.Errorf("Expected error, got nil")
+	}
+
+	// Test mismatched literal
+	result = testEval("let [1, y] = [2, 2]; y")
+	if _, ok := result.(*object.Error); !ok {
+		t.Errorf("Expected error, got nil")
+	}
+}
+
+func TestTupleDestructuring(t *testing.T) {
+	// Test successful destructuring
+	result := testEval("let (x, y) = (1, 2); x + y")
+	if resultIns, ok := result.(*object.Integer); ok {
+		if resultIns.Value != 3 {
+			t.Errorf("Expected 3, got %v", resultIns.Value)
+		}
+	} else {
+		t.Errorf("Expected no error, got %v", result)
+	}
+
+	// Test destructuring with discards
+	result = testEval("let (_, y) = (1, 2); y")
+	if resultIns, ok := result.(*object.Integer); ok {
+		if resultIns.Value != 2 {
+			t.Errorf("Expected 2, got %v", resultIns.Value)
+		}
+	} else {
+		t.Errorf("Expected no error, got %v", result)
+	}
+
+	// Test mismatched length
+	result = testEval("let (x, y) = (1); x + y")
+	if _, ok := result.(*object.Error); !ok {
+		t.Errorf("Expected error, got nil")
+	}
+
+	// Test mismatched literal
+	result = testEval("let (1, y) = (2, 2); y")
+	if _, ok := result.(*object.Error); !ok {
+		t.Errorf("Expected error, got nil")
 	}
 }

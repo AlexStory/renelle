@@ -3,6 +3,7 @@
 package lexer
 
 import (
+	"bytes"
 	"renelle/token"
 	"strings"
 )
@@ -83,6 +84,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LBRACKET, l.ch, l.line, l.column)
 	case ']':
 		tok = newToken(token.RBRACKET, l.ch, l.line, l.column)
+	case '@':
+		tok = newToken(token.AT, l.ch, l.line, l.column)
 	case '<':
 		if l.getNextChar() == '=' {
 			ch := l.ch
@@ -145,11 +148,16 @@ func (l *Lexer) NextToken() token.Token {
 			tok.Line = l.line
 			tok.Column = l.column
 			tok.Literal = l.readIdentifier()
-			if l.ch == '(' {
+			switch l.ch {
+			case '(':
 				tok.Type = token.FUNCCALL
-			} else {
+			case ':':
+				tok.Type = token.ATOM
+				l.readChar()
+			default:
 				tok.Type = token.LookupIdent(tok.Literal)
 			}
+
 			return tok
 		} else if isDigit(l.ch, l.getPrevChar(), l.getNextChar()) {
 			tok.Line = l.line
@@ -209,7 +217,7 @@ func (l *Lexer) peekChar() byte {
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' || l.ch == '\n' {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' || l.ch == '\n' || l.ch == ',' {
 		l.readChar()
 	}
 }
@@ -242,7 +250,7 @@ func (l *Lexer) readNumber() string {
 }
 
 func (l *Lexer) readAtom() string {
-	position := l.position
+	position := l.position + 1
 	l.readChar()
 
 	for isLetter(l.ch) {
@@ -267,19 +275,38 @@ func (l *Lexer) getNextChar() byte {
 
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) {
+	for isLetter(l.ch) || isDigit(l.ch, 0, 0) {
 		l.readChar()
 	}
 	return l.input[position:l.position]
 }
 
 func (l *Lexer) readString() string {
-	position := l.position + 1
+	var out bytes.Buffer
 	for {
 		l.readChar()
-		if l.ch == '"' || l.ch == 0 {
+		if l.ch == '\\' {
+			l.readChar()
+			switch l.ch {
+			case 'n':
+				out.WriteString("\n")
+			case 't':
+				out.WriteString("\t")
+			case 'r':
+				out.WriteString("\r")
+			case '"':
+				out.WriteString("\"")
+			case '\\':
+				out.WriteString("\\")
+			default:
+				out.WriteString("\\" + string(l.ch))
+			}
+
+		} else if l.ch == '"' || l.ch == 0 {
 			break
+		} else {
+			out.WriteByte(l.ch)
 		}
 	}
-	return l.input[position:l.position]
+	return out.String()
 }
