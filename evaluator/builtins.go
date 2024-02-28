@@ -2,7 +2,10 @@
 
 package evaluator
 
-import "renelle/object"
+import (
+	"fmt"
+	"renelle/object"
+)
 
 var builtins = map[string]*object.Builtin{
 	"len": {
@@ -128,6 +131,16 @@ var builtins = map[string]*object.Builtin{
 			}
 
 			return NIL
+		},
+	},
+	"print": {
+		Fn: func(line, col int, args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+			}
+
+			fmt.Println(args[0].Inspect())
+			return OK
 		},
 	},
 }
