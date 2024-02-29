@@ -30,3 +30,21 @@ func (e *Environment) Set(name string, val Object) Object {
 	e.store[name] = val
 	return val
 }
+
+type MetaData = map[string]interface{}
+
+type EvalContext struct {
+	MetaData *MetaData
+	Line     int
+	Column   int
+}
+
+func NewEvalContext() *EvalContext {
+	return &EvalContext{
+		MetaData: &MetaData{
+			"args": make([]string, 0),
+		},
+		Line:   1,
+		Column: 1,
+	}
+}

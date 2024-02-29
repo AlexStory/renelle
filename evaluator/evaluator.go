@@ -22,16 +22,16 @@ var atoms = map[string]*object.Atom{
 	"ok":  OK,
 }
 
-func Eval(node ast.Node, env *object.Environment) object.Object {
+func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) object.Object {
 	switch node := node.(type) {
 
 	// statements
 	case *ast.Program:
-		result := evalProgram(node.Statements, env)
+		result := evalProgram(node.Statements, env, ctx)
 
 		mainFunc, ok := env.Get("main")
 		if ok {
-			return applyFunction(mainFunc, []object.Object{}, 0, 0)
+			return applyFunction(mainFunc, []object.Object{}, ctx)
 		}
 
 		return result
@@ -40,20 +40,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		env.Set(node.Name.Value, &object.Function{Parameters: node.Parameters, Body: node.Body, Env: env})
 
 	case *ast.ExpressionStatement:
-		return Eval(node.Expression, env)
+		return Eval(node.Expression, env, ctx)
 
 	case *ast.BlockStatement:
-		return evalBlockStatements(node.Statements, env)
+		return evalBlockStatements(node.Statements, env, ctx)
 
 	case *ast.ReturnStatement:
-		val := Eval(node.ReturnValue, env)
+		val := Eval(node.ReturnValue, env, ctx)
 		if isError(val) {
 			return val
 		}
 		return &object.ReturnValue{Value: val}
 
 	case *ast.LetStatement:
-		val := Eval(node.Value, env)
+		val := Eval(node.Value, env, ctx)
 		if isError(val) {
 			return val
 		}
@@ -63,9 +63,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				env.Set(left.Value, val)
 			}
 		case *ast.TupleLiteral:
-			return handleTupleDestructuring(left, val, env, node.Token.Line, node.Token.Column)
+			ctx.Line = node.Token.Line
+			ctx.Column = node.Token.Column
+			return handleTupleDestructuring(left, val, env, ctx)
 		case *ast.ArrayLiteral:
-			return handleArrayDestructuring(left, val, env, node.Token.Line, node.Token.Column)
+			ctx.Line = node.Token.Line
+			ctx.Column = node.Token.Column
+			return handleArrayDestructuring(left, val, env, ctx)
 		default:
 			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
 		}
@@ -82,14 +86,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.String{Value: node.Value}
 
 	case *ast.ArrayLiteral:
-		elements := evalExpressions(node.Elements, env)
+		elements := evalExpressions(node.Elements, env, ctx)
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
 		return &object.Array{Elements: elements}
 
 	case *ast.TupleLiteral:
-		elements := evalExpressions(node.Elements, env)
+		elements := evalExpressions(node.Elements, env, ctx)
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
@@ -105,7 +109,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIdentifier(node, env)
 
 	case *ast.PrefixExpression:
-		right := Eval(node.Right, env)
+		right := Eval(node.Right, env, ctx)
 		if isError(right) {
 			return right
 		}
@@ -117,22 +121,22 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
 			} else {
 				right.Arguments = append([]ast.Expression{node.Left}, right.Arguments...)
-				return Eval(right, env)
+				return Eval(right, env, ctx)
 			}
 		}
 
-		left := Eval(node.Left, env)
+		left := Eval(node.Left, env, ctx)
 		if isError(left) {
 			return left
 		}
-		right := Eval(node.Right, env)
+		right := Eval(node.Right, env, ctx)
 		if isError(right) {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right, node.Token.Line, node.Token.Column)
 
 	case *ast.IfExpression:
-		return evalIfExpression(node, env)
+		return evalIfExpression(node, env, ctx)
 
 	case *ast.FunctionLiteral:
 		params := node.Parameters
@@ -140,12 +144,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Function{Parameters: params, Body: body, Env: env}
 
 	case *ast.IndexExpression:
-		left := Eval(node.Left, env)
+		left := Eval(node.Left, env, ctx)
 		if isError(left) {
 			return left
 		}
 
-		index := Eval(node.Index, env)
+		index := Eval(node.Index, env, ctx)
 		if isError(index) {
 			return index
 		}
@@ -153,27 +157,27 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIndexExpression(left, index, node.Token.Line, node.Token.Column)
 
 	case *ast.CallExpression:
-		function := Eval(node.Function, env)
+		function := Eval(node.Function, env, ctx)
 		if isError(function) {
 			return function
 		}
 
-		args := evalExpressions(node.Arguments, env)
+		args := evalExpressions(node.Arguments, env, ctx)
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
 		}
 
-		return applyFunction(function, args, node.Token.Line, node.Token.Column)
+		return applyFunction(function, args, ctx)
 	}
 
 	return nil
 }
 
-func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Object {
+func evalExpressions(exps []ast.Expression, env *object.Environment, ctx *object.EvalContext) []object.Object {
 	var result []object.Object
 
 	for _, e := range exps {
-		evaluated := Eval(e, env)
+		evaluated := Eval(e, env, ctx)
 		if isError(evaluated) {
 			return []object.Object{evaluated}
 		}
@@ -183,13 +187,13 @@ func evalExpressions(exps []ast.Expression, env *object.Environment) []object.Ob
 	return result
 }
 
-func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *object.Environment, line, col int) object.Object {
+func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
 	tupleObject, ok := val.(*object.Tuple)
 	if !ok {
-		return newError(line, col, "right-hand side of assignment is not a tuple")
+		return newError(ctx.Line, ctx.Column, "right-hand side of assignment is not a tuple")
 	}
 	if len(tuple.Elements) != len(tupleObject.Elements) {
-		return newError(line, col, "cannot destructure tuple: size mismatch")
+		return newError(ctx.Line, ctx.Column, "cannot destructure tuple: size mismatch")
 	}
 	for i, el := range tuple.Elements {
 		switch el := el.(type) {
@@ -199,7 +203,7 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 			}
 			env.Set(el.Value, tupleObject.Elements[i])
 		default:
-			leftVal := Eval(el, env)
+			leftVal := Eval(el, env, ctx)
 			if isError(leftVal) {
 				return leftVal
 			}
@@ -212,13 +216,13 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 	return OK
 }
 
-func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *object.Environment, line, col int) object.Object {
+func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
 	arrayObject, ok := val.(*object.Array)
 	if !ok {
-		return newError(line, col, "right-hand side of assignment is not an array")
+		return newError(ctx.Line, ctx.Column, "right-hand side of assignment is not an array")
 	}
 	if len(array.Elements) != len(arrayObject.Elements) {
-		return newError(line, col, "cannot destructure array: size mismatch")
+		return newError(ctx.Line, ctx.Column, "cannot destructure array: size mismatch")
 	}
 	for i, el := range array.Elements {
 		switch el := el.(type) {
@@ -228,7 +232,7 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 			}
 			env.Set(el.Value, arrayObject.Elements[i])
 		default:
-			leftVal := Eval(el, env)
+			leftVal := Eval(el, env, ctx)
 			if isError(leftVal) {
 				return leftVal
 			}
@@ -241,20 +245,20 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 	return OK
 }
 
-func applyFunction(fn object.Object, args []object.Object, line, col int) object.Object {
+func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
-		extendedEnv := extendFunctionEnv(fn, args, line, col)
-		evaluated := Eval(fn.Body, extendedEnv)
+		extendedEnv := extendFunctionEnv(fn, args, ctx)
+		evaluated := Eval(fn.Body, extendedEnv, ctx)
 		return unwrapReturnValue(evaluated)
 	case *object.Builtin:
-		return fn.Fn(line, col, args...)
+		return fn.Fn(ctx, args...)
 	default:
-		return newError(line, col, "not a function: %s", fn.Type())
+		return newError(ctx.Line, ctx.Column, "not a function: %s", fn.Type())
 	}
 }
 
-func extendFunctionEnv(fn *object.Function, args []object.Object, line, col int) *object.Environment {
+func extendFunctionEnv(fn *object.Function, args []object.Object, ctx *object.EvalContext) *object.Environment {
 	env := object.NewEnclosedEnvironment(fn.Env)
 
 	for paramIdx, param := range fn.Parameters {
@@ -272,11 +276,11 @@ func unwrapReturnValue(obj object.Object) object.Object {
 	return obj
 }
 
-func evalProgram(stmts []ast.Statement, env *object.Environment) object.Object {
+func evalProgram(stmts []ast.Statement, env *object.Environment, ctx *object.EvalContext) object.Object {
 	var result object.Object
 
 	for _, statement := range stmts {
-		result = Eval(statement, env)
+		result = Eval(statement, env, ctx)
 
 		switch result := result.(type) {
 		case *object.ReturnValue:
@@ -289,11 +293,11 @@ func evalProgram(stmts []ast.Statement, env *object.Environment) object.Object {
 	return result
 }
 
-func evalBlockStatements(stmts []ast.Statement, env *object.Environment) object.Object {
+func evalBlockStatements(stmts []ast.Statement, env *object.Environment, ctx *object.EvalContext) object.Object {
 	var result object.Object
 
 	for _, statement := range stmts {
-		result = Eval(statement, env)
+		result = Eval(statement, env, ctx)
 
 		rt := result.Type()
 		if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
@@ -495,16 +499,16 @@ func evalBangOperatorExpression(right object.Object) object.Object {
 	}
 }
 
-func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {
-	condition := Eval(ie.Condition, env)
+func evalIfExpression(ie *ast.IfExpression, env *object.Environment, ctx *object.EvalContext) object.Object {
+	condition := Eval(ie.Condition, env, ctx)
 	if isError(condition) {
 		return condition
 	}
 
 	if isTruthy(condition) {
-		return Eval(ie.Consequence, env)
+		return Eval(ie.Consequence, env, ctx)
 	} else if ie.Alternative != nil {
-		return Eval(ie.Alternative, env)
+		return Eval(ie.Alternative, env, ctx)
 	} else {
 		return NIL
 	}

@@ -15,6 +15,7 @@ import (
 func Start() {
 	scanner := bufio.NewScanner(os.Stdin)
 	env := object.NewEnvironment()
+	ctx := object.NewEvalContext()
 
 	for {
 		fmt.Print(">> ")
@@ -34,7 +35,7 @@ func Start() {
 			continue
 		}
 
-		evaluated := evaluator.Eval(program, env)
+		evaluated := evaluator.Eval(program, env, ctx)
 
 		if evaluated != nil {
 			io.WriteString(os.Stdout, evaluated.Inspect())

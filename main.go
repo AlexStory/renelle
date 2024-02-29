@@ -20,7 +20,7 @@ func main() {
 
 	args := flag.Args()
 
-	if len(args) == 1 {
+	if len(args) >= 1 {
 		filename := args[0]
 		content, err := ioutil.ReadFile(filename)
 		if err != nil {
@@ -37,10 +37,10 @@ func main() {
 		}
 
 		env := object.NewEnvironment()
-		evaluated := evaluator.Eval(program, env)
-		if evaluated != nil {
-			// fmt.Println(evaluated.Inspect())
-		}
+		ctx := object.NewEvalContext()
+		(*ctx.MetaData)["args"] = args[1:]
+
+		evaluator.Eval(program, env, ctx)
 	} else if len(args) == 0 {
 		repl.Start()
 	} else {

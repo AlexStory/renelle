@@ -110,7 +110,7 @@ func (f *Function) Inspect() string {
 }
 func (f *Function) Type() ObjectType { return FUNCTION_OBJ }
 
-type BuiltinFunction func(line, col int, args ...Object) Object
+type BuiltinFunction func(ctx *EvalContext, args ...Object) Object
 
 type Builtin struct {
 	Fn BuiltinFunction

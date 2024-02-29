@@ -9,9 +9,9 @@ import (
 
 var builtins = map[string]*object.Builtin{
 	"len": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 
 			switch arg := args[0].(type) {
@@ -20,17 +20,17 @@ var builtins = map[string]*object.Builtin{
 			case *object.Array:
 				return &object.Integer{Value: int64(len(arg.Elements))}
 			default:
-				return newError(line, col, "argument to `len` not supported, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `len` not supported, got %s", args[0].Type())
 			}
 		},
 	},
 	"head": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 			if args[0].Type() != object.ARRAY_OBJ {
-				return newError(line, col, "argument to `head` must be ARRAY, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `head` must be ARRAY, got %s", args[0].Type())
 			}
 
 			arr := args[0].(*object.Array)
@@ -43,12 +43,12 @@ var builtins = map[string]*object.Builtin{
 	},
 
 	"tail": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 			if args[0].Type() != object.ARRAY_OBJ {
-				return newError(line, col, "argument to `tail` must be ARRAY, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `tail` must be ARRAY, got %s", args[0].Type())
 			}
 
 			arr := args[0].(*object.Array)
@@ -63,12 +63,12 @@ var builtins = map[string]*object.Builtin{
 		},
 	},
 	"last": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 			if args[0].Type() != object.ARRAY_OBJ {
-				return newError(line, col, "argument to `last` must be ARRAY, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `last` must be ARRAY, got %s", args[0].Type())
 			}
 
 			arr := args[0].(*object.Array)
@@ -81,12 +81,12 @@ var builtins = map[string]*object.Builtin{
 		},
 	},
 	"push": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 2 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=2", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=2", len(args))
 			}
 			if args[0].Type() != object.ARRAY_OBJ {
-				return newError(line, col, "argument to `push` must be ARRAY, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `push` must be ARRAY, got %s", args[0].Type())
 			}
 
 			arr := args[0].(*object.Array)
@@ -100,12 +100,12 @@ var builtins = map[string]*object.Builtin{
 		},
 	},
 	"fst": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 			if args[0].Type() != object.TUPLE_OBJ {
-				return newError(line, col, "argument to `fst` must be TUPLE, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `fst` must be TUPLE, got %s", args[0].Type())
 			}
 
 			tuple := args[0].(*object.Tuple)
@@ -117,12 +117,12 @@ var builtins = map[string]*object.Builtin{
 		},
 	},
 	"snd": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 			if args[0].Type() != object.TUPLE_OBJ {
-				return newError(line, col, "argument to `snd` must be TUPLE, got %s", args[0].Type())
+				return newError(ctx.Line, ctx.Column, "argument to `snd` must be TUPLE, got %s", args[0].Type())
 			}
 
 			tuple := args[0].(*object.Tuple)
@@ -134,13 +134,28 @@ var builtins = map[string]*object.Builtin{
 		},
 	},
 	"print": {
-		Fn: func(line, col int, args ...object.Object) object.Object {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
 			if len(args) != 1 {
-				return newError(line, col, "wrong number of arguments. got=%d, want=1", len(args))
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
 			}
 
 			fmt.Println(args[0].Inspect())
 			return OK
+		},
+	},
+	"os_args": {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
+			if len(args) != 0 {
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=0", len(args))
+			}
+
+			arguments := &object.Array{}
+
+			for _, arg := range (*ctx.MetaData)["args"].([]string) {
+				arguments.Elements = append(arguments.Elements, &object.String{Value: arg})
+			}
+
+			return arguments
 		},
 	},
 }
