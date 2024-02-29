@@ -27,7 +27,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	// statements
 	case *ast.Program:
-		return evalProgram(node.Statements, env)
+		result := evalProgram(node.Statements, env)
+
+		mainFunc, ok := env.Get("main")
+		if ok {
+			return applyFunction(mainFunc, []object.Object{}, 0, 0)
+		}
+
+		return result
 
 	case *ast.FunctionStatement:
 		env.Set(node.Name.Value, &object.Function{Parameters: node.Parameters, Body: node.Body, Env: env})

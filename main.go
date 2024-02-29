@@ -39,7 +39,7 @@ func main() {
 		env := object.NewEnvironment()
 		evaluated := evaluator.Eval(program, env)
 		if evaluated != nil {
-			fmt.Println(evaluated.Inspect())
+			// fmt.Println(evaluated.Inspect())
 		}
 	} else if len(args) == 0 {
 		repl.Start()
