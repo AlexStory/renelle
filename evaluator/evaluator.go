@@ -129,6 +129,15 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		if isError(left) {
 			return left
 		}
+
+		if node.Operator == "and" && !isTruthy(left) {
+			return left
+		}
+
+		if node.Operator == "or" && isTruthy(left) {
+			return left
+		}
+
 		right := Eval(node.Right, env, ctx)
 		if isError(right) {
 			return right
