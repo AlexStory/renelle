@@ -211,6 +211,10 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 				continue
 			}
 			env.Set(el.Value, tupleObject.Elements[i])
+		case *ast.TupleLiteral:
+			return handleTupleDestructuring(el, tupleObject.Elements[i], env, ctx)
+		case *ast.ArrayLiteral:
+			return handleArrayDestructuring(el, tupleObject.Elements[i], env, ctx)
 		default:
 			leftVal := Eval(el, env, ctx)
 			if isError(leftVal) {
@@ -240,6 +244,10 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 				continue
 			}
 			env.Set(el.Value, arrayObject.Elements[i])
+		case *ast.TupleLiteral:
+			return handleTupleDestructuring(el, arrayObject.Elements[i], env, ctx)
+		case *ast.ArrayLiteral:
+			return handleArrayDestructuring(el, arrayObject.Elements[i], env, ctx)
 		default:
 			leftVal := Eval(el, env, ctx)
 			if isError(leftVal) {

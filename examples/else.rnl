@@ -1,0 +1,8 @@
+let x = 
+    if false {
+        1
+    }
+
+fn main() {
+    print(x)
+}

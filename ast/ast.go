@@ -461,3 +461,27 @@ func (te *TupleLiteral) String() string {
 	out.WriteString(")")
 	return out.String()
 }
+
+type MapLiteral struct {
+	Token token.Token // The '{' token
+	Pairs map[Expression]Expression
+
+	comments []string
+}
+
+func (ml *MapLiteral) expressionNode()      {}
+func (ml *MapLiteral) T() token.Token       { return ml.Token }
+func (ml *MapLiteral) TokenLiteral() string { return ml.Token.Literal }
+func (ml *MapLiteral) Comments() []string   { return ml.comments }
+func (ml *MapLiteral) AddComment(c string)  { ml.comments = append(ml.comments, c) }
+func (ml *MapLiteral) String() string {
+	var out bytes.Buffer
+	pairs := []string{}
+	for key, value := range ml.Pairs {
+		pairs = append(pairs, key.String()+" = "+value.String())
+	}
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, " "))
+	out.WriteString("}")
+	return out.String()
+}

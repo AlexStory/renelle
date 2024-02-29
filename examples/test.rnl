@@ -2,6 +2,25 @@ let x = 1
 let y = 2
 let result = x + y
 
+let cat = {
+	name: "hayley"
+	age: 8
+	"has tail" = true
+}
+
+let cat = {
+	name: = "hayley"
+	age: = 8
+	"has tail" = true
+}
+
+# here's a comment
+fn print_result() {
+	if result > 0 {
+		print(result)
+	}
+}
+
 fn main() {
-	print(result)
+	print_result()
 }

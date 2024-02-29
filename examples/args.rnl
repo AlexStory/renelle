@@ -1,3 +1,4 @@
 fn main() {
-    print(os_args())
+    let args = os_args()
+    print(args)
 }
