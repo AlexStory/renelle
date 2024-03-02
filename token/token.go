@@ -43,6 +43,7 @@ const (
 	NEQ       = "!="
 	POW       = "**"
 	PIPE      = "|>"
+	DOT       = "."
 
 	LPAREN   = "("
 	RPAREN   = ")"

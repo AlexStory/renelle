@@ -36,6 +36,7 @@ and or
 "foo bar"
 [1 2] @ 0
 dog:
+cat.name
 `
 
 	tests := []struct {
@@ -129,7 +130,10 @@ dog:
 		{token.AT, "@", 26, 7},
 		{token.INT, "0", 26, 9},
 		{token.ATOM, "dog", 27, 1},
-		{token.EOF, "", 28, 1},
+		{token.IDENT, "cat", 28, 1},
+		{token.DOT, ".", 28, 4},
+		{token.IDENT, "name", 28, 5},
+		{token.EOF, "", 29, 1},
 	}
 
 	l := New(input)

@@ -24,6 +24,7 @@ const (
 	PREFIX      // -X or !X
 	CALL        // myFunction(X)
 	INDEX       // array[index]
+	ACCESS      // object.property
 )
 
 var precedences = map[token.TokenType]int{
@@ -45,6 +46,7 @@ var precedences = map[token.TokenType]int{
 	token.OR:       OR,
 	token.AND:      AND,
 	token.AT:       INDEX,
+	token.DOT:      ACCESS,
 }
 
 type (
@@ -106,6 +108,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.AND, p.parseInfixExpression)
 	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.AT, p.parseIndexExpression)
+	p.registerInfix(token.DOT, p.parsePropertyAccessExpression)
 
 	p.nextToken()
 	p.nextToken()
@@ -410,6 +413,17 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 	}
 
 	return block
+}
+
+func (p *Parser) parsePropertyAccessExpression(left ast.Expression) ast.Expression {
+	expression := &ast.PropertyAccessExpression{Token: p.curToken, Left: left}
+
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+	expression.Right = p.parseIdentifier().(*ast.Identifier)
+
+	return expression
 }
 
 func (p *Parser) parseFunctionLiteral() ast.Expression {

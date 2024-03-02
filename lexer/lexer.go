@@ -132,6 +132,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Literal = l.readAtom()
 		tok.Type = token.ATOM
 		return tok
+	case '.':
+		tok = newToken(token.DOT, l.ch, l.line, l.column)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF

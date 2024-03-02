@@ -158,4 +158,13 @@ var builtins = map[string]*object.Builtin{
 			return arguments
 		},
 	},
+	"type": {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
+			if len(args) != 1 {
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=1", len(args))
+			}
+
+			return &object.String{Value: string(args[0].Type())}
+		},
+	},
 }

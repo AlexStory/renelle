@@ -1192,3 +1192,41 @@ func testStringLiteral(t *testing.T, il ast.Expression, value string) {
 		t.Errorf("strlit.Value not %q. got=%q", value, strlit.Value)
 	}
 }
+
+func TestPropertyAccessExpression(t *testing.T) {
+	input := `myMap.property`
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		for i, s := range program.Statements {
+			fmt.Printf("program.Statements[%d] = %s\n", i, s.String())
+		}
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	access, ok := stmt.Expression.(*ast.PropertyAccessExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.PropertyAccessExpression. got=%T",
+			stmt.Expression)
+	}
+
+	if !testIdentifier(t, access.Left, "myMap") {
+		return
+	}
+
+	if !testIdentifier(t, access.Right, "property") {
+		return
+	}
+}

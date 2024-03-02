@@ -423,6 +423,23 @@ func (ie *IndexExpression) String() string {
 	return out.String()
 }
 
+type PropertyAccessExpression struct {
+	Token token.Token // The '.' token
+	Left  Expression
+	Right *Identifier
+
+	comments []string
+}
+
+func (pae *PropertyAccessExpression) expressionNode()      {}
+func (pae *PropertyAccessExpression) T() token.Token       { return pae.Token }
+func (pae *PropertyAccessExpression) TokenLiteral() string { return pae.Token.Literal }
+func (pae *PropertyAccessExpression) Comments() []string   { return pae.comments }
+func (pae *PropertyAccessExpression) AddComment(c string)  { pae.comments = append(pae.comments, c) }
+func (pae *PropertyAccessExpression) String() string {
+	return pae.Left.String() + "." + pae.Right.String()
+}
+
 type ApplyExpression struct {
 	Token token.Token // The '$' token
 	Left  Expression

@@ -109,6 +109,12 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.PropertyAccessExpression:
+		left := Eval(node.Left, env, ctx)
+		if isError(left) {
+			return left
+		}
+		return evalPropertyAccessExpression(left, node.Right, node.Token.Line, node.Token.Column)
 
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env, ctx)
@@ -289,6 +295,28 @@ func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.E
 	}
 
 	return mapObject
+}
+
+func evalPropertyAccessExpression(left object.Object, right ast.Expression, line, col int) object.Object {
+	switch left := left.(type) {
+	case *object.Map:
+		// Ensure the right expression is an Identifier
+		ident, ok := right.(*ast.Identifier)
+		if !ok {
+			return newError(line, col, "invalid property access: %s", right.String())
+		}
+
+		// Get or create the atom for the identifier
+		key := getOrCreateAtom(ident.Value)
+
+		value, ok := left.Get(key)
+		if !ok {
+			return NIL
+		}
+		return value
+	default:
+		return newError(line, col, "property access not supported: %s", left.Type())
+	}
 }
 
 func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
