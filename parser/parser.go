@@ -289,11 +289,13 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 	for !p.peekTokenIs(token.RBRACE) && !p.peekTokenIs(token.EOF) {
 		p.nextToken()
 		key := p.parseExpression(LOWEST)
-		if _, ok := key.(*ast.AtomLiteral); ok {
+		if _, ok := key.(*ast.AtomLiteral); ok && !p.peekTokenIs(token.ASSIGN) {
+			// If the key is an AtomLiteral and the next token is not ASSIGN, parse the key as an Atom
 			p.nextToken()
 			val := p.parseExpression(LOWEST)
 			mapLiteral.Pairs[key] = val
 		} else {
+			// If the key is not an AtomLiteral or the next token is ASSIGN, parse the key as a String
 			if !p.expectPeek(token.ASSIGN) {
 				return nil
 			}

@@ -1,0 +1,6 @@
+let cat = {
+    name: "hayley"
+    age: 8
+}
+
+print(cat.name)

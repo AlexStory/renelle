@@ -2,18 +2,6 @@ let x = 1
 let y = 2
 let result = x + y
 
-let cat = {
-	name: "hayley"
-	age: 8
-	"has tail" = true
-}
-
-let cat = {
-	name: = "hayley"
-	age: = 8
-	"has tail" = true
-}
-
 # here's a comment
 fn print_result() {
 	if result > 0 {
@@ -21,6 +9,24 @@ fn print_result() {
 	}
 }
 
+
+
+# we have maps, and . notation now
+let cat = {
+	name: "hayley"
+	age: 8
+}
+
+print(cat.name)
+
+# they also work like dictionaries with any kind of key
+let kids = {
+	cat = "toothless"
+	:me = "xander"
+}
+
+print(kids @ cat)
 fn main() {
-	print_result()
+	print(cat.name)
+	print(kids@cat)
 }
