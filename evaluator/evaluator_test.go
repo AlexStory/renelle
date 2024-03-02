@@ -666,3 +666,117 @@ func TestTupleDestructuring(t *testing.T) {
 		t.Errorf("Expected error, got nil")
 	}
 }
+
+func TestEvalMapLiteral(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected map[interface{}]interface{}
+	}{
+		{
+			input: `let cat = {name: "hayley", age: 8}`,
+			expected: map[interface{}]interface{}{
+				&object.Atom{Value: "name"}: "hayley",
+				&object.Atom{Value: "age"}:  8,
+			},
+		},
+		{
+			input: `let dog = {"name" = "goldie", "age" = 8}`,
+			expected: map[interface{}]interface{}{
+				&object.String{Value: "name"}: "goldie",
+				&object.String{Value: "age"}:  8,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		result, ok := evaluated.(*object.Map)
+		if !ok {
+			t.Fatalf("object is not Map. got=%T (%+v)", evaluated, evaluated)
+		}
+
+		if len(result.Store.Buckets) != len(tt.expected) {
+			t.Fatalf("Map has wrong num of pairs. got=%d, want=%d",
+				len(result.Store.Buckets), len(tt.expected))
+		}
+
+		for expectedKey, expectedValue := range tt.expected {
+			value, ok := result.Get(expectedKey.(object.Object))
+			if !ok {
+				t.Fatalf("no value for given key in Map")
+			}
+
+			switch expected := expectedValue.(type) {
+			case string:
+				str, ok := value.(*object.String)
+				if !ok {
+					t.Errorf("value is not *object.String. got=%T (%+v)", value, value)
+					continue
+				}
+
+				if str.Value != expected {
+					t.Errorf("value is not %q. got=%q", expected, str.Value)
+				}
+			case int:
+				integer, ok := value.(*object.Integer)
+				if !ok {
+					t.Errorf("value is not *object.Integer. got=%T (%+v)", value, value)
+					continue
+				}
+
+				if integer.Value != int64(expected) {
+					t.Errorf("value is not %d. got=%d", expected, integer.Value)
+				}
+			}
+		}
+	}
+}
+func TestEvalMapIndexOperator(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{
+			input:    `let cat = {name: "hayley", age: 8}; cat@:name`,
+			expected: "hayley",
+		},
+		{
+			input:    `let dog = {"name" = "goldie", "age" = 8}; dog@"name"`,
+			expected: "goldie",
+		},
+		{
+			input:    `let cat = {name: "hayley", age: 8}; cat@:age`,
+			expected: 8,
+		},
+		{
+			input:    `let dog = {"name" = "goldie", "age" = 8}; dog@"age"`,
+			expected: 8,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		switch expected := tt.expected.(type) {
+		case string:
+			str, ok := evaluated.(*object.String)
+			if !ok {
+				t.Errorf("object is not String. got=%T (%+v)", evaluated, evaluated)
+				continue
+			}
+
+			if str.Value != expected {
+				t.Errorf("String object has wrong value. got=%q, want=%q", str.Value, expected)
+			}
+		case int:
+			integer, ok := evaluated.(*object.Integer)
+			if !ok {
+				t.Errorf("object is not Integer. got=%T (%+v)", evaluated, evaluated)
+				continue
+			}
+
+			if integer.Value != int64(expected) {
+				t.Errorf("Integer object has wrong value. got=%d, want=%d", integer.Value, expected)
+			}
+		}
+	}
+}

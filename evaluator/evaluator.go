@@ -73,7 +73,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		default:
 			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
 		}
-		return OK
+		return val
 
 	// expressions
 	case *ast.IntegerLiteral:
@@ -85,6 +85,8 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 
+	case *ast.MapLiteral:
+		return evalMapLiteral(node, env, ctx)
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env, ctx)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -220,7 +222,7 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 			if isError(leftVal) {
 				return leftVal
 			}
-			if !objectEquals(leftVal, tupleObject.Elements[i]) {
+			if !object.Equals(leftVal, tupleObject.Elements[i]) {
 				tok := tuple.Elements[i]
 				return newError(tok.T().Line, tok.T().Column, "cannot destructure tuple: value mismatch")
 			}
@@ -253,13 +255,40 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 			if isError(leftVal) {
 				return leftVal
 			}
-			if !objectEquals(leftVal, arrayObject.Elements[i]) {
+			if !object.Equals(leftVal, arrayObject.Elements[i]) {
 				tok := array.Elements[i]
 				return newError(tok.T().Line, tok.T().Column, "cannot destructure array: value mismatch")
 			}
 		}
 	}
 	return OK
+}
+
+func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.EvalContext) object.Object {
+	hashTableSize := int(float64(len(node.Pairs)) / 0.7)
+	hashTable := object.NewHashTable(hashTableSize)
+	mapObject := &object.Map{Store: hashTable}
+
+	for keyNode, valueNode := range node.Pairs {
+		key := Eval(keyNode, env, ctx)
+		if isError(key) {
+			return key
+		}
+
+		_, ok := key.(object.Hashable)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "unusable as hash key: %s", key.Type())
+		}
+
+		value := Eval(valueNode, env, ctx)
+		if isError(value) {
+			return value
+		}
+
+		mapObject.Put(key, value)
+	}
+
+	return mapObject
 }
 
 func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
@@ -334,6 +363,8 @@ func evalIndexExpression(left, index object.Object, line, col int) object.Object
 		return evalStringIndexExpression(left, index, line, col)
 	case left.Type() == object.TUPLE_OBJ && index.Type() == object.INTEGER_OBJ:
 		return evalTupleIndexExpression(left, index, line, col)
+	case left.Type() == object.MAP_OBJ:
+		return evalMapIndexExpression(left, index, line, col)
 	default:
 		return newError(line, col, "index operator not supported: %s", left.Type())
 	}
@@ -349,6 +380,15 @@ func evalArrayIndexExpression(array, index object.Object, line, col int) object.
 	}
 
 	return arrayObject.Elements[idx]
+}
+
+func evalMapIndexExpression(mapObject, index object.Object, line, col int) object.Object {
+	mapObj := mapObject.(*object.Map)
+	value, ok := mapObj.Get(index)
+	if !ok {
+		return NIL
+	}
+	return value
 }
 
 func evalTupleIndexExpression(tuple, index object.Object, line, col int) object.Object {
@@ -578,51 +618,4 @@ func isError(obj object.Object) bool {
 		return obj.Type() == object.ERROR_OBJ
 	}
 	return false
-}
-
-func objectEquals(a, b object.Object) bool {
-	switch a := a.(type) {
-	case *object.Integer:
-		b, ok := b.(*object.Integer)
-		return ok && a.Value == b.Value
-	case *object.Float:
-		b, ok := b.(*object.Float)
-		return ok && a.Value == b.Value
-	case *object.String:
-		b, ok := b.(*object.String)
-		return ok && a.Value == b.Value
-	case *object.Boolean:
-		b, ok := b.(*object.Boolean)
-		return ok && a.Value == b.Value
-	case *object.Atom:
-		b, ok := b.(*object.Atom)
-		return ok && a.Value == b.Value
-	case *object.ReturnValue:
-		b, ok := b.(*object.ReturnValue)
-		return ok && objectEquals(a.Value, b.Value)
-	case *object.Array:
-		b, ok := b.(*object.Array)
-		if !ok || len(a.Elements) != len(b.Elements) {
-			return false
-		}
-		for i, el := range a.Elements {
-			if !objectEquals(el, b.Elements[i]) {
-				return false
-			}
-		}
-		return true
-	case *object.Tuple:
-		b, ok := b.(*object.Tuple)
-		if !ok || len(a.Elements) != len(b.Elements) {
-			return false
-		}
-		for i, el := range a.Elements {
-			if !objectEquals(el, b.Elements[i]) {
-				return false
-			}
-		}
-		return true
-	default:
-		return false
-	}
 }
