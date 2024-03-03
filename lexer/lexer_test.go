@@ -37,6 +37,9 @@ and or
 [1 2] @ 0
 dog:
 cat.name
+cond {
+    true => "yes"
+}
 `
 
 	tests := []struct {
@@ -133,7 +136,13 @@ cat.name
 		{token.IDENT, "cat", 28, 1},
 		{token.DOT, ".", 28, 4},
 		{token.IDENT, "name", 28, 5},
-		{token.EOF, "", 29, 1},
+		{token.COND, "cond", 29, 1},
+		{token.LBRACE, "{", 29, 6},
+		{token.TRUE, "true", 30, 5},
+		{token.ARROW, "=>", 30, 10},
+		{token.STRING, "yes", 30, 13},
+		{token.RBRACE, "}", 31, 1},
+		{token.EOF, "", 32, 1},
 	}
 
 	l := New(input)
