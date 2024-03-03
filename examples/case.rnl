@@ -1,0 +1,12 @@
+fn mock_success() {
+    (:ok, "success")
+}
+
+let result = mock_success()
+
+fn main() {
+    case result {
+        (:ok value) => print(value)
+        (:err, _) => print("there was an error")
+    }
+}
