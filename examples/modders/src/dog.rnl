@@ -1,0 +1,5 @@
+module Modders.Dog
+
+fn bark() {
+    print("Woof!")
+}

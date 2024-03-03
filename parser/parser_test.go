@@ -1297,3 +1297,106 @@ func TestCaseExpression(t *testing.T) {
 		t.Fatalf("consequences does not contain 2 consequences. got=%d", len(caseExpr.Consequences))
 	}
 }
+
+func TestParseModuleIdentifier(t *testing.T) {
+	input := "MyApp.MyModule.MySubmodule"
+	l := lexer.New(input)
+	p := New(l)
+
+	identifier := p.parseIdentifier().(*ast.Identifier)
+	if identifier.Value != input {
+		t.Errorf("identifier.Value not '%s'. got=%s", input, identifier.Value)
+	}
+
+	input = "MyApp.MyModule.func"
+	l = lexer.New(input)
+	p = New(l)
+
+	identifier = p.parseIdentifier().(*ast.Identifier)
+	if identifier.Value != "MyApp.MyModule" {
+		t.Errorf("identifier.Value not 'MyApp.MyModule'. got=%s", identifier.Value)
+	}
+}
+
+func TestParseModule(t *testing.T) {
+	input := `
+    module MyApp.Module
+    fn x() {
+    }
+    `
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		for i, s := range program.Statements {
+			fmt.Printf("program.Statements[%d] = %s\n", i, s.String())
+		}
+		t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+			len(program.Statements))
+	}
+
+	moduleStmt, ok := program.Statements[0].(*ast.Module)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.Module. got=%T",
+			program.Statements[0])
+	}
+
+	if moduleStmt.Name.Value != "MyApp.Module" {
+		t.Errorf("moduleStmt.Name.Value not 'MyApp.Module'. got=%q", moduleStmt.Name.Value)
+	}
+
+	if len(moduleStmt.Body) != 1 {
+		for i, s := range moduleStmt.Body {
+			fmt.Printf("moduleStmt.Body[%d] = %s\n", i, s.String())
+		}
+		t.Fatalf("moduleStmt.Body does not contain 1 statements. got=%d",
+			len(moduleStmt.Body))
+	}
+}
+
+func TestModuleAccessExpression(t *testing.T) {
+	input := `Mod.func()`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		for i, s := range program.Statements {
+			fmt.Printf("program.Statements[%d] = %s\n", i, s.String())
+		}
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	access, ok := stmt.Expression.(*ast.PropertyAccessExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.PropertyAccessExpression. got=%T",
+			stmt.Expression)
+	}
+
+	if !testIdentifier(t, access.Left, "Mod") {
+		return
+	}
+
+	call, ok := access.Right.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("access.Right is not ast.CallExpression. got=%T",
+			access.Right)
+	}
+
+	if !testIdentifier(t, call.Function, "func") {
+		return
+	}
+}

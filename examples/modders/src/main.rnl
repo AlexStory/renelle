@@ -1,0 +1,8 @@
+module Modders
+
+fn main() {
+    Modders.Dog.bark()
+    
+    Array.length([1 2 3])
+    |> print()
+}

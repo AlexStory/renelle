@@ -1,0 +1,5 @@
+module Array
+
+fn length(array) {
+    len(array)
+}

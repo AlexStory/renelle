@@ -337,6 +337,21 @@ func (m *Map) Put(key, value Object) {
 	m.Store.Put(Pair{Key: key, Value: value})
 }
 
+type Env interface {
+	Get(name string) (Object, bool)
+	Set(name string, val Object) Object
+}
+
+type Module struct {
+	Name        string
+	Environment Env
+}
+
+func (m *Module) Type() ObjectType { return "MODULE" }
+func (m *Module) Inspect() string {
+	return fmt.Sprintf("module %s", m.Name)
+}
+
 func Equals(a, b Object) bool {
 	switch a := a.(type) {
 	case *Integer:
