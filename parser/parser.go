@@ -172,6 +172,8 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		stmt.Left = p.parseGroupedExpression()
 	case token.LBRACKET:
 		stmt.Left = p.parseArrayLiteral()
+	case token.LBRACE:
+		stmt.Left = p.parseMapLiteral()
 	default:
 		return nil
 	}

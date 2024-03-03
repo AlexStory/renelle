@@ -70,6 +70,10 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 			ctx.Line = node.Token.Line
 			ctx.Column = node.Token.Column
 			return handleArrayDestructuring(left, val, env, ctx)
+		case *ast.MapLiteral:
+			ctx.Line = node.Token.Line
+			ctx.Column = node.Token.Column
+			return handleMapDestructuring(left, val, env, ctx)
 		default:
 			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
 		}
@@ -268,6 +272,58 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 		}
 	}
 	return OK
+}
+
+func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
+	mapObj, ok := val.(*object.Map)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "expected map, got %s", val.Type())
+	}
+
+	for keyExpr, valueExpr := range left.Pairs {
+		// Evaluate the key expression
+		keyVal := Eval(keyExpr, env, ctx)
+		if isError(keyVal) {
+			return keyVal
+		}
+
+		// Get the value from the map
+		value, ok := mapObj.Get(keyVal)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "key not found: %s", keyVal.Inspect())
+		}
+
+		// Handle the value expression based on its type
+		switch valueExpr := valueExpr.(type) {
+		case *ast.Identifier:
+			// Set the value in the environment under the name given by the value expression
+			if valueExpr.Value != "_" {
+				env.Set(valueExpr.Value, value)
+			}
+		case *ast.MapLiteral:
+			// Recursively handle nested map destructuring
+			return handleMapDestructuring(valueExpr, value, env, ctx)
+		case *ast.ArrayLiteral:
+			// Handle array destructuring
+			return handleArrayDestructuring(valueExpr, value, env, ctx)
+		case *ast.TupleLiteral:
+			// Handle tuple destructuring
+			return handleTupleDestructuring(valueExpr, value, env, ctx)
+		default:
+			// Evaluate the value expression
+			valueVal := Eval(valueExpr, env, ctx)
+			if isError(valueVal) {
+				return valueVal
+			}
+
+			// Check if the value matches the value expression
+			if !object.Equals(valueVal, value) {
+				return newError(ctx.Line, ctx.Column, "cannot destructure map: value mismatch")
+			}
+		}
+	}
+
+	return val
 }
 
 func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.EvalContext) object.Object {

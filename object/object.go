@@ -292,7 +292,7 @@ func (m *Map) Inspect() string {
 		}
 		for e := bucket.Front(); e != nil; e = e.Next() {
 			pair := e.Value.(Pair)
-			elements = append(elements, pair.Key.Inspect()+": "+pair.Value.Inspect())
+			elements = append(elements, pair.Key.Inspect()+" = "+pair.Value.Inspect())
 		}
 	}
 
