@@ -426,7 +426,7 @@ func (ie *IndexExpression) String() string {
 type PropertyAccessExpression struct {
 	Token token.Token // The '.' token
 	Left  Expression
-	Right *Identifier
+	Right Expression
 
 	comments []string
 }
@@ -548,5 +548,31 @@ func (ce *CaseExpression) String() string {
 		out.WriteString(cond.String())
 		out.WriteString(ce.Consequences[i].String())
 	}
+	return out.String()
+}
+
+type Module struct {
+	Token token.Token
+	Name  *Identifier
+	Body  []Statement
+
+	comments []string
+}
+
+func (m *Module) statementNode()       {}
+func (m *Module) T() token.Token       { return m.Token }
+func (m *Module) TokenLiteral() string { return m.Token.Literal }
+func (m *Module) Comments() []string   { return []string{} }
+func (m *Module) AddComment(c string)  { m.comments = append(m.comments, c) }
+func (m *Module) String() string {
+	stmts := []string{}
+	for _, s := range m.Body {
+		stmts = append(stmts, s.String())
+	}
+
+	var out bytes.Buffer
+	out.WriteString(m.TokenLiteral() + " ")
+	out.WriteString(m.Name.String())
+	out.WriteString(strings.Join(stmts, ""))
 	return out.String()
 }

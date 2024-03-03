@@ -17,6 +17,8 @@ const (
 	ATOM     = "ATOM"
 	FUNCCALL = "FUNCCALL"
 
+	MODULE = "MODULE"
+
 	IF        = "IF"
 	ELSE      = "ELSE"
 	COND      = "COND"
@@ -65,6 +67,7 @@ type Token struct {
 }
 
 var TokenMap = map[string]TokenType{
+	"module": MODULE,
 	"let":    LET,
 	"fn":     FUNCTION,
 	"if":     IF,

@@ -4,11 +4,12 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
+	"unicode"
 
 	"renelle/ast"
 	"renelle/lexer"
 	"renelle/token"
-	"strconv"
 )
 
 const (
@@ -64,8 +65,9 @@ type Parser struct {
 	l      *lexer.Lexer
 	errors []ParseError
 
-	curToken  token.Token
-	peekToken token.Token
+	curToken     token.Token
+	peekToken    token.Token
+	peekTokenTwo token.Token
 
 	prefixParseFns map[token.TokenType]prefixParseFn
 	infixParseFns  map[token.TokenType]infixParseFn
@@ -114,6 +116,7 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.nextToken()
 	p.nextToken()
+	p.nextToken()
 	return p
 }
 
@@ -131,7 +134,8 @@ func (p *Parser) Errors() []ParseError {
 
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
-	p.peekToken = p.l.NextToken()
+	p.peekToken = p.peekTokenTwo
+	p.peekTokenTwo = p.l.NextToken()
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -157,6 +161,8 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseReturnStatement()
 	case token.FUNCTION:
 		return p.parseFunctionStatement()
+	case token.MODULE:
+		return p.parseModule()
 	default:
 		return p.parseExpressionStatement()
 	}
@@ -229,7 +235,26 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	initialToken := p.curToken
+	identifierValue := initialToken.Literal
+
+	// If the identifier starts with an uppercase letter
+	if unicode.IsUpper(rune(identifierValue[0])) {
+		for {
+			if !p.peekTokenIs(token.DOT) {
+				break
+			}
+			// Look ahead one more token
+			if p.peekTokenTwoIs(token.FUNCCALL) || (p.peekTokenTwoIs(token.IDENT) && unicode.IsLower(rune(p.peekTokenTwo.Literal[0]))) {
+				break
+			}
+			p.nextToken() // Skip the dot
+			identifierValue += "." + p.peekToken.Literal
+			p.nextToken() // Move to the next identifier
+		}
+	}
+	identifier := &ast.Identifier{Token: initialToken, Value: identifierValue}
+	return identifier
 }
 
 func (p *Parser) parseAtom() ast.Expression {
@@ -503,10 +528,15 @@ func (p *Parser) parseBlockStatement() *ast.BlockStatement {
 func (p *Parser) parsePropertyAccessExpression(left ast.Expression) ast.Expression {
 	expression := &ast.PropertyAccessExpression{Token: p.curToken, Left: left}
 
-	if !p.expectPeek(token.IDENT) {
+	if p.peekTokenIs(token.IDENT) {
+		p.nextToken() // Consume the IDENT
+		expression.Right = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	} else if p.peekTokenIs(token.FUNCCALL) {
+		p.nextToken() // Consume the FUNCCALL
+		expression.Right = p.parseCallExpression()
+	} else {
 		return nil
 	}
-	expression.Right = p.parseIdentifier().(*ast.Identifier)
 
 	return expression
 }
@@ -646,12 +676,40 @@ func (p *Parser) parseBoolean() ast.Expression {
 	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
 
+func (p *Parser) parseModule() *ast.Module {
+	tok := p.curToken
+
+	// Expect the module name to be an identifier
+	if !p.expectPeek(token.IDENT) {
+		return nil
+	}
+
+	moduleName := p.parseIdentifier().(*ast.Identifier)
+	p.nextToken()
+
+	// Parse the body of the module
+	moduleBody := []ast.Statement{}
+	for !p.peekTokenIs(token.EOF) {
+		stmt := p.parseStatement()
+		if stmt != nil {
+			moduleBody = append(moduleBody, stmt)
+		}
+		p.nextToken()
+	}
+
+	return &ast.Module{Token: tok, Name: moduleName, Body: moduleBody}
+}
+
 func (p *Parser) curTokenIs(t token.TokenType) bool {
 	return p.curToken.Type == t
 }
 
 func (p *Parser) peekTokenIs(t token.TokenType) bool {
 	return p.peekToken.Type == t
+}
+
+func (p *Parser) peekTokenTwoIs(t token.TokenType) bool {
+	return p.peekTokenTwo.Type == t
 }
 
 func (p *Parser) expectPeek(t token.TokenType) bool {

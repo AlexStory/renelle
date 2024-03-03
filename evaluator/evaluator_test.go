@@ -862,3 +862,37 @@ func TestEvalCaseExpression(t *testing.T) {
 		testIntegerObject(t, evaluated, tt.expected)
 	}
 }
+func TestEvalModule(t *testing.T) {
+	input := `
+    module TestModule 
+
+    let x = 10;
+    let y = 20;
+    x + y;
+    
+    `
+
+	evaluated := testEval(input)
+	module, ok := evaluated.(*object.Module)
+	if !ok {
+		t.Fatalf("object is not Module. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if module.Name != "TestModule" {
+		t.Errorf("module has wrong name. got=%q", module.Name)
+	}
+
+	val, ok := module.Environment.Get("x")
+	if !ok {
+		t.Errorf("variable 'x' not found in module")
+	}
+
+	testIntegerObject(t, val, 10)
+
+	val, ok = module.Environment.Get("y")
+	if !ok {
+		t.Errorf("variable 'y' not found in module")
+	}
+
+	testIntegerObject(t, val, 20)
+}

@@ -3,11 +3,19 @@
 package evaluator
 
 import (
+	"embed"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
+	"strings"
+	"unicode"
 
 	"renelle/ast"
+	"renelle/lexer"
 	"renelle/object"
+	"renelle/parser"
+	"renelle/stdlib"
 )
 
 var (
@@ -20,6 +28,10 @@ var (
 var atoms = map[string]*object.Atom{
 	"nil": NIL,
 	"ok":  OK,
+}
+
+func ApplyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
+	return applyFunction(fn, args, ctx)
 }
 
 func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) object.Object {
@@ -78,6 +90,17 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
 		}
 		return val
+	case *ast.Module:
+		moduleEnv := object.NewEnclosedEnvironment(env)
+		for _, statement := range node.Body {
+			ret := Eval(statement, moduleEnv, ctx)
+			if isError(ret) {
+				return ret
+			}
+		}
+		module := &object.Module{Name: node.Name.Value, Environment: moduleEnv}
+		env.SetModule(node.Name.Value, module)
+		return module
 
 	// expressions
 	case *ast.IntegerLiteral:
@@ -118,7 +141,9 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		if isError(left) {
 			return left
 		}
-		return evalPropertyAccessExpression(left, node.Right, node.Token.Line, node.Token.Column)
+		ctx.Line = node.Token.Line
+		ctx.Column = node.Token.Column
+		return evalPropertyAccessExpression(left, node.Right, ctx)
 
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env, ctx)
@@ -398,13 +423,55 @@ func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.E
 	return mapObject
 }
 
-func evalPropertyAccessExpression(left object.Object, right ast.Expression, line, col int) object.Object {
+func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx *object.EvalContext) object.Object {
 	switch left := left.(type) {
+	case *object.Module:
+		switch right := right.(type) {
+		case *ast.Identifier:
+			// Get the function from the module
+			funcObj, ok := left.Environment.Get(right.Value)
+			if !ok {
+				return newError(ctx.Line, ctx.Column, "property %s not found", right.Value)
+			}
+
+			// Check if the object is a function
+			if _, ok := funcObj.(*object.Function); !ok {
+				return newError(ctx.Line, ctx.Column, "property %s is not a function", right.Value)
+			}
+
+			return funcObj
+		case *ast.CallExpression:
+			// Ensure the function expression is an Identifier
+			ident, ok := right.Function.(*ast.Identifier)
+			if !ok {
+				return newError(ctx.Line, ctx.Column, "invalid function call: %s", right.Function.String())
+			}
+
+			// Get the function from the module
+			funcObj, ok := left.Environment.Get(ident.Value)
+			if !ok {
+				return newError(ctx.Line, ctx.Column, "function %s not found", ident.Value)
+			}
+
+			// Check if the object is a function
+			fn, ok := funcObj.(*object.Function)
+			if !ok {
+				return newError(ctx.Line, ctx.Column, "property %s is not a function", ident.Value)
+			}
+
+			// Evaluate the arguments
+			args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
+
+			// Apply the function to the arguments
+			return applyFunction(fn, args, ctx)
+		default:
+			return newError(ctx.Line, ctx.Column, "invalid property access: %s", right.String())
+		}
 	case *object.Map:
 		// Ensure the right expression is an Identifier
 		ident, ok := right.(*ast.Identifier)
 		if !ok {
-			return newError(line, col, "invalid property access: %s", right.String())
+			return newError(ctx.Line, ctx.Column, "invalid property access: %s", right.String())
 		}
 
 		// Get or create the atom for the identifier
@@ -416,7 +483,7 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, line
 		}
 		return value
 	default:
-		return newError(line, col, "property access not supported: %s", left.Type())
+		return newError(ctx.Line, ctx.Column, "property access not supported: %s", left.Type())
 	}
 }
 
@@ -545,15 +612,25 @@ func evalStringIndexExpression(str, index object.Object, line, col int) object.O
 }
 
 func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
-	val, ok := env.Get(node.Value)
-	if ok {
-		return val
+	if unicode.IsUpper([]rune(node.Value)[0]) {
+		if module, ok := env.GetModule(node.Value); ok {
+			return module
+		} else {
+			module := loadModule(node.Value, env)
+			if error, ok := module.(*object.Error); ok {
+				return error
+			}
+			return module
+		}
+	} else {
+		if val, ok := env.Get(node.Value); ok {
+			return val
+		}
+		if val, ok := builtins[node.Value]; ok {
+			return val
+		}
 	}
-
-	if builtin, ok := builtins[node.Value]; ok {
-		return builtin
-	}
-	return newError(node.Token.Line, node.Token.Column, "identifier not found: %s", node.Value)
+	return newError(node.Token.Line, node.Token.Column, "identifier not found: "+node.Value)
 }
 
 func evalPrefixExpression(operator string, right object.Object, line, col int) object.Object {
@@ -761,4 +838,73 @@ func isError(obj object.Object) bool {
 		return obj.Type() == object.ERROR_OBJ
 	}
 	return false
+}
+
+func loadModule(moduleName string, env *object.Environment) object.Object {
+	moduleParts := strings.Split(moduleName, ".")
+	// Convert each part of the module name to lowercase
+	for i, part := range moduleParts {
+		moduleParts[i] = strings.ToLower(part)
+	}
+	// Join the parts with the OS-specific path separator and append the file extension
+	localModulePath := filepath.Join(append([]string{"src"}, moduleParts[1:]...)...) + ".rnl"
+	depsModulePath := filepath.Join(append([]string{".deps", moduleParts[0], "src"}, moduleParts[1:]...)...) + ".rnl"
+	stdLibModulePath := filepath.Join(moduleParts...) + ".rnl"
+	if _, err := stdlib.Files.Open(stdLibModulePath); err == nil {
+		return loadModuleFromEmbedFS(stdlib.Files, stdLibModulePath, env, moduleName)
+	}
+	// Check the local src directory first
+	if _, err := os.Stat(localModulePath); err == nil {
+		return loadModuleFromFile(localModulePath, env, moduleName)
+	}
+	// If the module is not found locally, check the .deps directory
+	if _, err := os.Stat(depsModulePath); err == nil {
+		return loadModuleFromFile(depsModulePath, env, moduleName)
+	}
+
+	return newError(0, 0, "module not found: %s", moduleName)
+}
+
+func loadModuleFromFile(modulePath string, env *object.Environment, moduleName string) object.Object {
+	moduleContent, err := os.ReadFile(modulePath)
+	if err != nil {
+		return newError(0, 0, "error reading module file: %s", err)
+	}
+
+	l := lexer.New(string(moduleContent))
+	p := parser.New(l)
+	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		return newError(0, 0, "parser errors: %v", p.Errors())
+	}
+
+	ctx := object.NewEvalContext()
+	Eval(program, env.Root(), ctx)
+	if module, ok := env.GetModule(moduleName); ok {
+		return module
+	}
+
+	return newError(0, 0, "unknown error loading module: %s", moduleName)
+}
+
+func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environment, moduleName string) object.Object {
+	moduleContent, err := fs.ReadFile(modulePath)
+	if err != nil {
+		return newError(0, 0, "error reading module file: %s", err)
+	}
+
+	l := lexer.New(string(moduleContent))
+	p := parser.New(l)
+	program := p.ParseProgram()
+	if len(p.Errors()) != 0 {
+		return newError(0, 0, "parser errors: %v", p.Errors())
+	}
+
+	ctx := object.NewEvalContext()
+	Eval(program, env.Root(), ctx)
+	if module, ok := env.GetModule(moduleName); ok {
+		return module
+	}
+
+	return newError(0, 0, "unknown error loading module: %s", moduleName)
 }
