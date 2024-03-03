@@ -156,6 +156,48 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		}
 		return evalInfixExpression(node.Operator, left, right, node.Token.Line, node.Token.Column)
 
+	case *ast.CaseExpression:
+		testVal := Eval(node.Test, env, ctx)
+		if isError(testVal) {
+			return testVal
+		}
+		for i, condition := range node.Conditions {
+			switch condition := condition.(type) {
+			case *ast.Identifier:
+				if condition.Value == "_" {
+					newEnv := object.NewEnclosedEnvironment(env)
+					return Eval(node.Consequences[i], newEnv, ctx)
+				}
+			case *ast.TupleLiteral:
+				ctx.Line = node.Token.Line
+				ctx.Column = node.Token.Column
+				newEnv := object.NewEnclosedEnvironment(env)
+				err := handleTupleDestructuring(condition, testVal, newEnv, ctx)
+				if isError(err) {
+					continue
+				}
+				return Eval(node.Consequences[i], newEnv, ctx)
+			case *ast.ArrayLiteral:
+				ctx.Line = node.Token.Line
+				ctx.Column = node.Token.Column
+				newEnv := object.NewEnclosedEnvironment(env)
+				err := handleArrayDestructuring(condition, testVal, newEnv, ctx)
+				if isError(err) {
+					continue
+				}
+				return Eval(node.Consequences[i], newEnv, ctx)
+			default:
+				conditionVal := Eval(condition, env, ctx)
+				if isError(conditionVal) {
+					return conditionVal
+				}
+				if object.Equals(conditionVal, testVal) {
+					newEnv := object.NewEnclosedEnvironment(env)
+					return Eval(node.Consequences[i], newEnv, ctx)
+				}
+			}
+		}
+		return newError(node.Token.Line, node.Token.Column, "no matching case")
 	case *ast.IfExpression:
 		return evalIfExpression(node, env, ctx)
 

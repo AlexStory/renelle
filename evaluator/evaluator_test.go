@@ -833,3 +833,32 @@ func TestCondExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestEvalCaseExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{
+			"let x = 1; case x { 1 => 2, _ => 3 }",
+			2,
+		},
+		{
+			"let x = 2; case x { 1 => 2, _ => 3 }",
+			3,
+		},
+		{
+			"let x = (1, 2); case x { (1, 2) => 3, _ => 4 }",
+			3,
+		},
+		{
+			"let x = (2, 3); case x { (1, 2) => 3, _ => 4 }",
+			4,
+		},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		testIntegerObject(t, evaluated, tt.expected)
+	}
+}

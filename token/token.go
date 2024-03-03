@@ -20,6 +20,7 @@ const (
 	IF        = "IF"
 	ELSE      = "ELSE"
 	COND      = "COND"
+	CASE      = "CASE"
 	RETURN    = "RETURN"
 	INT       = "INT"
 	FLOAT     = "FLOAT"
@@ -69,6 +70,7 @@ var TokenMap = map[string]TokenType{
 	"if":     IF,
 	"else":   ELSE,
 	"cond":   COND,
+	"case":   CASE,
 	"return": RETURN,
 	"true":   TRUE,
 	"false":  FALSE,

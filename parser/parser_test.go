@@ -1264,3 +1264,36 @@ func TestCondExpression(t *testing.T) {
 		t.Fatalf("consequences does not contain 3 consequences. got=%d", len(cond.Consequences))
 	}
 }
+
+func TestCaseExpression(t *testing.T) {
+	input := `
+    case run_function() {
+        (:ok, data) => "do good thing"
+        (:err, error) => "handle error"
+    }
+    `
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	caseExpr, ok := stmt.Expression.(*ast.CaseExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CaseExpression. got=%T", stmt.Expression)
+	}
+
+	if len(caseExpr.Conditions) != 2 {
+		t.Fatalf("conditions does not contain 2 conditions. got=%d", len(caseExpr.Conditions))
+	}
+
+	if len(caseExpr.Consequences) != 2 {
+		t.Fatalf("consequences does not contain 2 consequences. got=%d", len(caseExpr.Consequences))
+	}
+}

@@ -525,3 +525,28 @@ func (ce *CondExpression) String() string {
 	}
 	return out.String()
 }
+
+type CaseExpression struct {
+	Token        token.Token // The 'case' token
+	Test         Expression
+	Conditions   []Expression
+	Consequences []*BlockStatement
+
+	comments []string
+}
+
+func (ce *CaseExpression) expressionNode()      {}
+func (ce *CaseExpression) T() token.Token       { return ce.Token }
+func (ce *CaseExpression) TokenLiteral() string { return ce.Token.Literal }
+func (ce *CaseExpression) Comments() []string   { return ce.comments }
+func (ce *CaseExpression) AddComment(c string)  { ce.comments = append(ce.comments, c) }
+func (ce *CaseExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("case")
+	out.WriteString(ce.Test.String())
+	for i, cond := range ce.Conditions {
+		out.WriteString(cond.String())
+		out.WriteString(ce.Consequences[i].String())
+	}
+	return out.String()
+}
