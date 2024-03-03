@@ -1230,3 +1230,37 @@ func TestPropertyAccessExpression(t *testing.T) {
 		return
 	}
 }
+
+func TestCondExpression(t *testing.T) {
+	input := `
+    cond {
+        x > 10 => "greater than 10"
+        x > 5 => "greater than 5"
+        true => "default"
+    }
+    `
+
+	l := lexer.New(input)
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	cond, ok := stmt.Expression.(*ast.CondExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CondExpression. got=%T", stmt.Expression)
+	}
+
+	if len(cond.Conditions) != 3 {
+		t.Fatalf("conditions does not contain 3 conditions. got=%d", len(cond.Conditions))
+	}
+
+	if len(cond.Consequences) != 3 {
+		t.Fatalf("consequences does not contain 3 consequences. got=%d", len(cond.Consequences))
+	}
+}

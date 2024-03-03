@@ -85,6 +85,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.FALSE, p.parseBoolean)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.COND, p.parseCondExpression)
 	p.registerPrefix(token.BACKSLASH, p.parseFunctionLiteral)
 	p.registerPrefix(token.FUNCCALL, p.parseCallExpression)
 	p.registerPrefix(token.ATOM, p.parseAtom)
@@ -397,6 +398,43 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		}
 
 		expression.Alternative = p.parseBlockStatement()
+	}
+
+	return expression
+}
+
+func (p *Parser) parseCondExpression() ast.Expression {
+	expression := &ast.CondExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	for !p.peekTokenIs(token.RBRACE) && !p.peekTokenIs(token.EOF) {
+		p.nextToken()
+		condition := p.parseExpression(LOWEST)
+		expression.Conditions = append(expression.Conditions, condition)
+
+		if !p.expectPeek(token.ARROW) {
+			return nil
+		}
+
+		p.nextToken()
+
+		if p.peekTokenIs(token.LBRACE) {
+			consequence := p.parseBlockStatement()
+			expression.Consequences = append(expression.Consequences, consequence)
+		} else {
+			consequence := p.parseExpression(LOWEST)
+			expr := &ast.ExpressionStatement{Token: p.curToken, Expression: consequence}
+			expression.Consequences = append(expression.Consequences, &ast.BlockStatement{Statements: []ast.Statement{expr}})
+
+		}
+
+	}
+
+	if !p.expectPeek(token.RBRACE) {
+		return nil
 	}
 
 	return expression

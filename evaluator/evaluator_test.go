@@ -811,3 +811,25 @@ func TestPropertyAccessExpression(t *testing.T) {
 		}
 	}
 }
+
+func TestCondExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{"cond { true => 1 }", 1},
+		{"cond { false => 1 true => 2 }", 2},
+		{"cond { false => 1 false => 2 }", nil},
+		{"cond { 1 > 2 => 1 2 > 1 => 2 }", 2},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		integer, ok := tt.expected.(int)
+		if ok {
+			testIntegerObject(t, evaluated, int64(integer))
+		} else {
+			testNilObject(t, evaluated)
+		}
+	}
+}

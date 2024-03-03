@@ -159,6 +159,9 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 	case *ast.IfExpression:
 		return evalIfExpression(node, env, ctx)
 
+	case *ast.CondExpression:
+		return evalCondExpression(node, env, ctx)
+
 	case *ast.FunctionLiteral:
 		params := node.Parameters
 		body := node.Body
@@ -653,6 +656,20 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment, ctx *object
 	} else {
 		return NIL
 	}
+}
+
+func evalCondExpression(ce *ast.CondExpression, env *object.Environment, ctx *object.EvalContext) object.Object {
+	for i, cond := range ce.Conditions {
+		condVal := Eval(cond, env, ctx)
+		if isError(condVal) {
+			return condVal
+		}
+
+		if isTruthy(condVal) {
+			return evalBlockStatements(ce.Consequences[i].Statements, env, ctx)
+		}
+	}
+	return NIL
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object, line, col int) object.Object {

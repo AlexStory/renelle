@@ -502,3 +502,26 @@ func (ml *MapLiteral) String() string {
 	out.WriteString("}")
 	return out.String()
 }
+
+type CondExpression struct {
+	Token        token.Token // The 'cond' token
+	Conditions   []Expression
+	Consequences []*BlockStatement
+
+	comments []string
+}
+
+func (ce *CondExpression) expressionNode()      {}
+func (ce *CondExpression) T() token.Token       { return ce.Token }
+func (ce *CondExpression) TokenLiteral() string { return ce.Token.Literal }
+func (ce *CondExpression) Comments() []string   { return ce.comments }
+func (ce *CondExpression) AddComment(c string)  { ce.comments = append(ce.comments, c) }
+func (ce *CondExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("cond")
+	for i, cond := range ce.Conditions {
+		out.WriteString(cond.String())
+		out.WriteString(ce.Consequences[i].String())
+	}
+	return out.String()
+}
