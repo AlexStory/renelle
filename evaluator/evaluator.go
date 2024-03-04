@@ -508,6 +508,9 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
 	switch fn := fn.(type) {
 	case *object.Function:
+		if len(args) != len(fn.Parameters) {
+			return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
+		}
 		extendedEnv := extendFunctionEnv(fn, args, ctx)
 		evaluated := Eval(fn.Body, extendedEnv, ctx)
 		return unwrapReturnValue(evaluated)
@@ -711,6 +714,10 @@ func evalIntegerInfixExpression(operator string, left, right object.Object, line
 		return nativeBoolToBooleanObject(leftVal < rightVal)
 	case ">":
 		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case ">=":
+		return nativeBoolToBooleanObject(leftVal >= rightVal)
+	case "<=":
+		return nativeBoolToBooleanObject(leftVal <= rightVal)
 	case "==":
 		return nativeBoolToBooleanObject(leftVal == rightVal)
 	case "!=":
@@ -741,6 +748,10 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 		return nativeBoolToBooleanObject(leftVal < rightVal)
 	case ">":
 		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case ">=":
+		return nativeBoolToBooleanObject(leftVal >= rightVal)
+	case "<=":
+		return nativeBoolToBooleanObject(leftVal <= rightVal)
 	case "==":
 		return nativeBoolToBooleanObject(leftVal == rightVal)
 	case "!=":

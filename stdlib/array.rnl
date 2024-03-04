@@ -1,5 +1,37 @@
 module Array
 
+# returns the all the elements of two arrays combined in a new array
+fn concat(array1 array2) {
+    if len(array2) == 0 {
+        array1
+    } else {
+        concat(push(array1 head(array2)) tail(array2))
+    }
+}
+
+# returns a new array, with all elements that return true for the given function
+fn filter(array f) {
+    _filter(array, [], f)
+}
+
+fn _filter(array acc f) {
+    if len(array) == 0 {
+        acc
+    } else {
+        if f(head(array)) {
+            _filter(tail(array), push(acc, head(array)), f)
+        } else {
+            _filter(tail(array), acc, f)
+        }
+    }
+}
+
+# Returns the first element of the array.
+let _head = head
+fn head(array) {
+    _head(array)
+}
+
 # Returns the number of elements in the array.
 fn length(array) {
     len(array)
@@ -16,4 +48,34 @@ fn _map(array, acc, f) {
     } else {
         _map(tail(array), push(acc, f(head(array))), f)
     }
+}
+
+# recursively sorts the array
+fn quicksort(array) {
+    if len(array) <= 1 {
+        array
+    } else {
+        let pivot = head(array)
+        let less = filter(tail(array), \x => x < pivot )
+        let greater = filter(tail(array), \x => x >= pivot )
+        concat(quicksort(less), concat([pivot], quicksort(greater)))
+    }
+}
+
+# recursively sorts the arry, by applying the given function to the elements
+fn quicksort_by(array, f) {
+    if len(array) <= 1 {
+        array
+    } else {
+        let pivot = head(array)
+        let less = filter(tail(array), \x => f(x) < f(pivot) )
+        let greater = filter(tail(array), \x => f(x) >= f(pivot) )
+        concat(quicksortBy(less, f), concat([pivot], quicksortBy(greater, f)))
+    }
+}
+
+# Returns a new array containing the elements of the original array, except for the first element.
+let _tail = tail
+fn tail(array) {
+    _tail(array)
 }
