@@ -79,3 +79,16 @@ let _tail = tail
 fn tail(array) {
     _tail(array)
 }
+
+# Returns a new array with elements of both arrays combined in tuples
+fn zip(array1 array2) {
+    _zip(array1, array2, [])
+}
+
+fn _zip(array1 array2 acc) {
+    if len(array1) == 0 or len(array2) == 0 {
+        acc
+    } else {
+        _zip(tail(array1), tail(array2), push(acc, [(head(array1), head(array2))]))
+    }
+}

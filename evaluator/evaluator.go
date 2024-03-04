@@ -73,6 +73,9 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		switch left := node.Left.(type) {
 		case *ast.Identifier:
 			if left.Value != "_" {
+				if unicode.IsUpper(rune(left.Value[0])) {
+					return newError(node.Token.Line, node.Token.Column, "local variables can not start with an uppercase letter")
+				}
 				env.Set(left.Value, val)
 			}
 		case *ast.TupleLiteral:
@@ -310,6 +313,8 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 		case *ast.Identifier:
 			if el.Value == "_" {
 				continue
+			} else if unicode.IsUpper(rune(el.Value[0])) {
+				return newError(el.Token.Line, el.Token.Column, "local variables can not start with an uppercase letter")
 			}
 			env.Set(el.Value, tupleObject.Elements[i])
 		case *ast.TupleLiteral:
@@ -343,6 +348,8 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 		case *ast.Identifier:
 			if el.Value == "_" {
 				continue
+			} else if unicode.IsUpper(rune(el.Value[0])) {
+				return newError(el.Token.Line, el.Token.Column, "local variables can not start with an uppercase letter")
 			}
 			env.Set(el.Value, arrayObject.Elements[i])
 		case *ast.TupleLiteral:
@@ -386,6 +393,9 @@ func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object
 		switch valueExpr := valueExpr.(type) {
 		case *ast.Identifier:
 			// Set the value in the environment under the name given by the value expression
+			if unicode.IsUpper(rune(valueExpr.Value[0])) {
+				return newError(valueExpr.Token.Line, valueExpr.Token.Column, "local variables can not start with an uppercase letter")
+			}
 			if valueExpr.Value != "_" {
 				env.Set(valueExpr.Value, value)
 			}
