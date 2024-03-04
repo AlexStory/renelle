@@ -1,5 +1,19 @@
 module Array
 
+# Returns the number of elements in the array.
 fn length(array) {
     len(array)
+}
+
+# Applies a function to each element of the array and returns the resulting array.
+fn map(array, f) {
+    _map(array, [], f)
+}
+
+fn _map(array, acc, f) {
+    if length(array) == 0 {
+        acc
+    } else {
+        _map(tail(array), push(acc, f(head(array))), f)
+    }
 }

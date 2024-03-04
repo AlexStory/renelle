@@ -154,11 +154,29 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 
 	case *ast.InfixExpression:
 		if node.Operator == "|>" {
-			if right, ok := node.Right.(*ast.CallExpression); !ok {
-				return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
-			} else {
+			switch right := node.Right.(type) {
+			case *ast.CallExpression:
 				right.Arguments = append([]ast.Expression{node.Left}, right.Arguments...)
 				return Eval(right, env, ctx)
+			case *ast.PropertyAccessExpression:
+				// Assuming that the property access expression has a CallExpression as its property
+				if callExpr, ok := right.Right.(*ast.CallExpression); ok {
+					callExpr.Arguments = append([]ast.Expression{node.Left}, callExpr.Arguments...)
+					return Eval(right, env, ctx)
+				} else {
+					return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
+				}
+			case *ast.FunctionLiteral:
+				if len(right.Parameters) != 1 {
+					return newError(node.Token.Line, node.Token.Column, "function literal must take exactly one argument")
+				}
+				newCall := &ast.CallExpression{
+					Function:  right,
+					Arguments: []ast.Expression{node.Left},
+				}
+				return Eval(newCall, env, ctx)
+			default:
+				return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
 			}
 		}
 
