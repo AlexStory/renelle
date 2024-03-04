@@ -92,3 +92,20 @@ fn _zip(array1 array2 acc) {
         _zip(tail(array1), tail(array2), push(acc, [(head(array1), head(array2))]))
     }
 }
+
+fn zip_with(array1 array2 f) {
+    _zip_with(array1, array2, [], f)
+}
+
+fn _zip_with(array1 array2 acc f) {
+    if len(array1) == 0 or len(array2) == 0 {
+        acc
+    } else {
+        _zip_with(
+            tail(array1)
+            tail(array2)
+            push(acc, f(head(array1), head(array2)))
+            f
+        )
+    }
+}
