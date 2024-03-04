@@ -4,6 +4,8 @@ Renelle is a wip programming language for me to experimeent with writing a parse
 
 I'm going to try and design the language how I'd want my ideal language to be, since it is my language.
 
+This is a very brief descripion. A more thorough version can be found in the [docs](http://doc.renelle.org)
+
 ### Assignments
 simple `let` binding, no need for semicolon.
 
@@ -113,9 +115,7 @@ We will also have tuples, which when combined with atoms can represent values ve
 
 ### Modules
 
-**WIP: This is not finalized and i'm still testing different things**
-
-Modules can be declared at top level of a file, or they can be created with a block for scope.
+Modules can be declared at top level of a file, and should match the path in the src/ directory.
 
 ```
 module MyApp.Dog 
@@ -123,20 +123,6 @@ module MyApp.Dog
 
 fn bark() {
     "woof"
-}
-```
-
-```
-module Script {
-    fn do_work() {
-        ...
-    }
-}
-
-module Helper {
-    fn util_function() {
-        ...
-    }
 }
 ```
 
@@ -168,19 +154,6 @@ let dog = MyApp.Dog{
 }
 ```
 
-I'm still undecided between only allowing functions to be called with full module resolution.
-
-```
-Dog.bark(dog)
-```
-
-or allowing both that and common dot notation.
-
-```
-Dog.bark(dog)
-dog.bark() # both valid
-```
-
 #### Small Bits.
 
 Renelle allows `?` in variable and function names, so you could have the following.
@@ -193,12 +166,12 @@ List.empty?(my_list) # false
 I have very early ideas for a in-code documentation system. early prototypes look like this.
 
 ```
-##: Returns the sum of two numbers
-##: example:
-##:  let x = 1
-##:  let y = 2
-##:  add(x y)
-##: returns: 3 
+## Returns the sum of two numbers
+## example:
+##  let x = 1
+##  let y = 2
+##  add(x y)
+## returns: 3 
 fn add(x y) {
     x + y
 }
