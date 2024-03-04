@@ -4,7 +4,7 @@ Renelle is a wip programming language for me to experimeent with writing a parse
 
 I'm going to try and design the language how I'd want my ideal language to be, since it is my language.
 
-This is a very brief descripion. A more thorough version can be found in the [docs](http://doc.renelle.org)
+This is a very brief descripion. A more thorough version can be found in the [docs](http://docs.renelle.org)
 
 ### Assignments
 simple `let` binding, no need for semicolon.
