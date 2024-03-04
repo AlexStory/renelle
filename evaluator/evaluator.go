@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"renelle/ast"
+	"renelle/hostlib"
 	"renelle/lexer"
 	"renelle/object"
 	"renelle/parser"
@@ -452,12 +453,13 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 				return newError(ctx.Line, ctx.Column, "property %s not found", right.Value)
 			}
 
-			// Check if the object is a function
-			if _, ok := funcObj.(*object.Function); !ok {
+			// Check if the object is a function or a built-in
+			switch funcObj := funcObj.(type) {
+			case *object.Function, *object.Builtin:
+				return funcObj
+			default:
 				return newError(ctx.Line, ctx.Column, "property %s is not a function", right.Value)
 			}
-
-			return funcObj
 		case *ast.CallExpression:
 			// Ensure the function expression is an Identifier
 			ident, ok := right.Function.(*ast.Identifier)
@@ -471,17 +473,23 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 				return newError(ctx.Line, ctx.Column, "function %s not found", ident.Value)
 			}
 
-			// Check if the object is a function
-			fn, ok := funcObj.(*object.Function)
-			if !ok {
+			switch funcObj := funcObj.(type) {
+			case *object.Function:
+				// Evaluate the arguments
+				args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
+
+				// Apply the function to the arguments
+				return applyFunction(funcObj, args, ctx)
+			case *object.Builtin:
+				// Evaluate the arguments
+				args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
+
+				// Apply the built-in function to the arguments
+				return funcObj.Fn(ctx, args...)
+			default:
 				return newError(ctx.Line, ctx.Column, "property %s is not a function", ident.Value)
 			}
 
-			// Evaluate the arguments
-			args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
-
-			// Apply the function to the arguments
-			return applyFunction(fn, args, ctx)
 		default:
 			return newError(ctx.Line, ctx.Column, "invalid property access: %s", right.String())
 		}
@@ -932,6 +940,10 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 	ctx := object.NewEvalContext()
 	Eval(program, env.Root(), ctx)
 	if module, ok := env.GetModule(moduleName); ok {
+		switch moduleName {
+		case "Array":
+			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
+		}
 		return module
 	}
 

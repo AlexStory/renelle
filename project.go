@@ -19,7 +19,7 @@ func createProject(projectName string) error {
 	}
 
 	// Create the rnl.rnl file with properties and dependencies
-	rnlContent := fmt.Sprintf("let properties = {\n    name: \"%s\",\n    moduleName: \"%s\"\n}\n\nlet dependencies = [\n\n]\n", projectName, moduleName)
+	rnlContent := fmt.Sprintf("let properties = {\n    name: \"%s\"\n    moduleName: \"%s\"\n}\n\nlet dependencies = [\n\n]\n", projectName, moduleName)
 	err = os.WriteFile(filepath.Join(projectName, "rnl.rnl"), []byte(rnlContent), fs.FileMode(0644))
 	if err != nil {
 		return err
