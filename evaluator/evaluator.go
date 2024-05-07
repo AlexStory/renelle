@@ -978,6 +978,9 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 		switch moduleName {
 		case "Array":
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
+		case "File":
+			module.Environment.Set("open!", &object.Builtin{Fn: hostlib.FileOpenBang})
+			module.Environment.Set("write!", &object.Builtin{Fn: hostlib.FileWriteBang})
 		case "Map":
 			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
 			module.Environment.Set("keys", &object.Builtin{Fn: hostlib.MapKeys})
