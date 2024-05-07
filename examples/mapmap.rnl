@@ -1,0 +1,11 @@
+let cat = {
+    name: "hayley"
+    fur: "soft"
+}
+
+fn exclaim(k v) {
+    v + "!!!"
+}
+
+let newMap = Map.map(cat, exclaim)
+print(newMap)

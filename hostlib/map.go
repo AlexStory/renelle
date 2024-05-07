@@ -27,6 +27,22 @@ func MapHasKey(ctx *object.EvalContext, args ...object.Object) object.Object {
 	return constants.FALSE
 }
 
+func MapKeys(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 1 {
+		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "keys() takes exactly 1 argument"}
+	}
+
+	m, ok := args[0].(*object.Map)
+	if !ok {
+		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "keys() requires a map"}
+	}
+
+	keys := m.Store.Keys()
+	arr := &object.Array{Elements: keys}
+
+	return arr
+}
+
 func MapLength(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
 		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "length() takes exactly 1 argument"}

@@ -143,7 +143,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		}
 		ctx.Line = node.Token.Line
 		ctx.Column = node.Token.Column
-		return evalPropertyAccessExpression(left, node.Right, ctx)
+		return evalPropertyAccessExpression(left, node.Right, env, ctx)
 
 	case *ast.PrefixExpression:
 		right := Eval(node.Right, env, ctx)
@@ -448,7 +448,7 @@ func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.E
 	return mapObject
 }
 
-func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx *object.EvalContext) object.Object {
+func evalPropertyAccessExpression(left object.Object, right ast.Expression, env *object.Environment, ctx *object.EvalContext) object.Object {
 	switch left := left.(type) {
 	case *object.Module:
 		switch right := right.(type) {
@@ -482,13 +482,13 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 			switch funcObj := funcObj.(type) {
 			case *object.Function:
 				// Evaluate the arguments
-				args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
+				args := evalExpressions(right.Arguments, env, ctx)
 
 				// Apply the function to the arguments
 				return applyFunction(funcObj, args, ctx)
 			case *object.Builtin:
 				// Evaluate the arguments
-				args := evalExpressions(right.Arguments, left.Environment.(*object.Environment), ctx)
+				args := evalExpressions(right.Arguments, env, ctx)
 
 				// Apply the built-in function to the arguments
 				return funcObj.Fn(ctx, args...)
@@ -980,6 +980,7 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
 		case "Map":
 			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
+			module.Environment.Set("keys", &object.Builtin{Fn: hostlib.MapKeys})
 			module.Environment.Set("length", &object.Builtin{Fn: hostlib.MapLength})
 		}
 		return module

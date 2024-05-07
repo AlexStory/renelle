@@ -1,7 +1,24 @@
 module Map
 
-# Adds an item to a map
+# iterates over every key-value pair in a map, calling the given function with each pair and assigning the result to the value in a new map
+fn map(m f) {
+    let keys = Map.keys(m)
+    _map(m, keys, f, {})
+}
 
+fn _map(m, keys, f, new_map) {
+    if len(keys) == 0 {
+        new_map
+    } else {
+        let key = head(keys)
+        let value = m@key
+        let new_value = f(key, value)
+        let new_map = put(new_map, key, new_value)
+        _map(m, tail(keys), f, new_map)
+    }
+}
+
+# Adds an item to a map
 fn put(map, key, value) {
     { map with key = value }
 }
