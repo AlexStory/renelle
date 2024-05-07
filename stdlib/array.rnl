@@ -74,6 +74,20 @@ fn quicksort_by(array, f) {
     }
 }
 
+# Returns an accumulator, created by applying the function to each element of the array
+
+fn reduce(array, acc, f) {
+    _reduce(array, acc, f)
+}
+
+fn _reduce(array, acc, f) {
+    if len(array) == 0 {
+        acc
+    } else {
+        _reduce(tail(array), f(acc, head(array)), f)
+    }
+}
+
 # Returns a new array containing the elements of the original array, except for the first element.
 let _tail = tail
 fn tail(array) {
