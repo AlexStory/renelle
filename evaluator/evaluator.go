@@ -21,8 +21,9 @@ import (
 )
 
 var atoms = map[string]*object.Atom{
-	"nil": constants.NIL,
-	"ok":  constants.OK,
+	"nil":   constants.NIL,
+	"ok":    constants.OK,
+	"error": constants.ERROR,
 }
 
 func ApplyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
@@ -979,7 +980,9 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 		case "Array":
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
 		case "File":
+			module.Environment.Set("open", &object.Builtin{Fn: hostlib.FileOpen})
 			module.Environment.Set("open!", &object.Builtin{Fn: hostlib.FileOpenBang})
+			module.Environment.Set("write", &object.Builtin{Fn: hostlib.FileWrite})
 			module.Environment.Set("write!", &object.Builtin{Fn: hostlib.FileWriteBang})
 		case "Map":
 			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
