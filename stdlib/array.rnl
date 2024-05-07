@@ -32,6 +32,24 @@ fn head(array) {
     _head(array)
 }
 
+# Joins all elements of the array into a string.
+
+fn join(array, separator) {
+    _join(array, separator, "")
+}
+
+fn _join(array, separator, acc) {
+    if len(array) == 0 {
+        acc
+    } else {
+        if len(acc) == 0 {
+            _join(tail(array), separator, head(array))
+        } else {
+            _join(tail(array), separator, acc + separator + head(array))
+        }
+    }
+}
+
 # Returns the number of elements in the array.
 fn length(array) {
     len(array)
@@ -86,6 +104,11 @@ fn _reduce(array, acc, f) {
     } else {
         _reduce(tail(array), f(acc, head(array)), f)
     }
+}
+
+# Sums all items in the array
+fn sum(array) {
+    reduce(array, 0, \acc x => acc + x)
 }
 
 # Returns a new array containing the elements of the original array, except for the first element.
