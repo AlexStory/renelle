@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"renelle/ast"
+	"renelle/constants"
 	"renelle/hostlib"
 	"renelle/lexer"
 	"renelle/object"
@@ -19,16 +20,9 @@ import (
 	"renelle/stdlib"
 )
 
-var (
-	TRUE  = &object.Boolean{Value: true}
-	FALSE = &object.Boolean{Value: false}
-	NIL   = &object.Atom{Value: "nil"}
-	OK    = &object.Atom{Value: "ok"}
-)
-
 var atoms = map[string]*object.Atom{
-	"nil": NIL,
-	"ok":  OK,
+	"nil": constants.NIL,
+	"ok":  constants.OK,
 }
 
 func ApplyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
@@ -334,7 +328,7 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 			}
 		}
 	}
-	return OK
+	return constants.OK
 }
 
 func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
@@ -369,7 +363,7 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 			}
 		}
 	}
-	return OK
+	return constants.OK
 }
 
 func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
@@ -517,7 +511,7 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 
 		value, ok := left.Get(key)
 		if !ok {
-			return NIL
+			return constants.NIL
 		}
 		return value
 	default:
@@ -642,7 +636,7 @@ func evalArrayIndexExpression(array, index object.Object, line, col int) object.
 	max := int64(len(arrayObject.Elements) - 1)
 
 	if idx < 0 || idx > max {
-		return NIL
+		return constants.NIL
 	}
 
 	return arrayObject.Elements[idx]
@@ -652,7 +646,7 @@ func evalMapIndexExpression(mapObject, index object.Object, line, col int) objec
 	mapObj := mapObject.(*object.Map)
 	value, ok := mapObj.Get(index)
 	if !ok {
-		return NIL
+		return constants.NIL
 	}
 	return value
 }
@@ -663,7 +657,7 @@ func evalTupleIndexExpression(tuple, index object.Object, line, col int) object.
 	max := int64(len(tupleObject.Elements) - 1)
 
 	if idx < 0 || idx > max {
-		return NIL
+		return constants.NIL
 	}
 
 	return tupleObject.Elements[idx]
@@ -675,7 +669,7 @@ func evalStringIndexExpression(str, index object.Object, line, col int) object.O
 	max := int64(len(strObject.Value) - 1)
 
 	if idx < 0 || idx > max {
-		return NIL
+		return constants.NIL
 	}
 
 	return &object.String{Value: string(strObject.Value[idx])}
@@ -806,7 +800,7 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return NIL
+		return constants.NIL
 	}
 }
 
@@ -829,14 +823,14 @@ func evalStringInfixExpression(operator string, left, right object.Object, line,
 
 func evalBangOperatorExpression(right object.Object) object.Object {
 	switch right {
-	case TRUE:
-		return FALSE
-	case FALSE:
-		return TRUE
-	case NIL:
-		return TRUE
+	case constants.TRUE:
+		return constants.FALSE
+	case constants.FALSE:
+		return constants.TRUE
+	case constants.NIL:
+		return constants.TRUE
 	default:
-		return FALSE
+		return constants.FALSE
 	}
 }
 
@@ -851,7 +845,7 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment, ctx *object
 	} else if ie.Alternative != nil {
 		return Eval(ie.Alternative, env, ctx)
 	} else {
-		return NIL
+		return constants.NIL
 	}
 }
 
@@ -866,7 +860,7 @@ func evalCondExpression(ce *ast.CondExpression, env *object.Environment, ctx *ob
 			return evalBlockStatements(ce.Consequences[i].Statements, env, ctx)
 		}
 	}
-	return NIL
+	return constants.NIL
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object, line, col int) object.Object {
@@ -882,9 +876,9 @@ func evalMinusPrefixOperatorExpression(right object.Object, line, col int) objec
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
 	if input {
-		return TRUE
+		return constants.TRUE
 	}
-	return FALSE
+	return constants.FALSE
 }
 
 func getOrCreateAtom(value string) *object.Atom {
@@ -898,9 +892,9 @@ func getOrCreateAtom(value string) *object.Atom {
 
 func isTruthy(obj object.Object) bool {
 	switch obj {
-	case NIL:
+	case constants.NIL:
 		return false
-	case FALSE:
+	case constants.FALSE:
 		return false
 	default:
 		return true
@@ -985,6 +979,7 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 		case "Array":
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
 		case "Map":
+			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
 			module.Environment.Set("length", &object.Builtin{Fn: hostlib.MapLength})
 		}
 		return module

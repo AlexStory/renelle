@@ -4,6 +4,7 @@ package evaluator
 
 import (
 	"fmt"
+	"renelle/constants"
 	"renelle/lexer"
 	"renelle/object"
 	"renelle/parser"
@@ -248,7 +249,7 @@ func TestIfElseExpression(t *testing.T) {
 }
 
 func testNilObject(t *testing.T, obj object.Object) bool {
-	if obj != NIL {
+	if obj != constants.NIL {
 		t.Errorf("object is not NULL. got=%T (%+v)", obj, obj)
 		return false
 	}
@@ -788,7 +789,7 @@ func TestPropertyAccessExpression(t *testing.T) {
 	}{
 		{"let m = {property: 5} m.property", 5},
 		{"let m = {property: 5, anotherProperty: 10}; m.anotherProperty", 10},
-		{"let m = {property: 5}; m.unknownProperty", NIL},
+		{"let m = {property: 5}; m.unknownProperty", constants.NIL},
 		{"let m = 5; m.property", "property access not supported: INTEGER"},
 	}
 

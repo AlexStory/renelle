@@ -9,6 +9,11 @@ fn concat(array1 array2) {
     }
 }
 
+# returns true if an array is empty
+fn empty?(array) {
+    len(array) == 0
+}
+
 # returns a new array, with all elements that return true for the given function
 fn filter(array f) {
     _filter(array, [], f)

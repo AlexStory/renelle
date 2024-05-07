@@ -3,8 +3,29 @@
 package hostlib
 
 import (
+	"renelle/constants"
 	"renelle/object"
 )
+
+func MapHasKey(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 {
+		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "haskey() takes exactly 2 arguments"}
+	}
+
+	m, ok := args[0].(*object.Map)
+	if !ok {
+		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "haskey() requires a map"}
+	}
+
+	key := args[1]
+
+	_, ok = m.Store.Get(key)
+	if ok {
+		return constants.TRUE
+	}
+
+	return constants.FALSE
+}
 
 func MapLength(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {

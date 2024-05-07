@@ -4,6 +4,7 @@ package evaluator
 
 import (
 	"fmt"
+	"renelle/constants"
 	"renelle/object"
 )
 
@@ -38,7 +39,7 @@ var builtins = map[string]*object.Builtin{
 				return arr.Elements[0]
 			}
 
-			return NIL
+			return constants.NIL
 		},
 	},
 
@@ -59,7 +60,7 @@ var builtins = map[string]*object.Builtin{
 				return &object.Array{Elements: newElements}
 			}
 
-			return NIL
+			return constants.NIL
 		},
 	},
 	"last": {
@@ -77,7 +78,7 @@ var builtins = map[string]*object.Builtin{
 				return arr.Elements[length-1]
 			}
 
-			return NIL
+			return constants.NIL
 		},
 	},
 	"push": {
@@ -113,7 +114,7 @@ var builtins = map[string]*object.Builtin{
 				return tuple.Elements[0]
 			}
 
-			return NIL
+			return constants.NIL
 		},
 	},
 	"snd": {
@@ -130,7 +131,7 @@ var builtins = map[string]*object.Builtin{
 				return tuple.Elements[1]
 			}
 
-			return NIL
+			return constants.NIL
 		},
 	},
 	"print": {
@@ -140,7 +141,7 @@ var builtins = map[string]*object.Builtin{
 			}
 
 			fmt.Println(args[0].Inspect())
-			return OK
+			return constants.OK
 		},
 	},
 	"os_args": {
