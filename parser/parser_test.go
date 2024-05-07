@@ -1400,3 +1400,63 @@ func TestModuleAccessExpression(t *testing.T) {
 		return
 	}
 }
+
+func TestMapUpdateLiteral(t *testing.T) {
+	input := `{ identifier with key = "value", anotherKey = "anotherValue" }`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		for i, s := range program.Statements {
+			fmt.Printf("program.Statements[%d] = %s\n", i, s.String())
+		}
+		t.Fatalf("program.Statements does not contain %d statements. got=%d",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	mapUpdate, ok := stmt.Expression.(*ast.MapUpdateLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.MapUpdateLiteral. got=%T", stmt.Expression)
+	}
+
+	if mapUpdate.Left.String() != "identifier" {
+		t.Fatalf("mapUpdate.Left not 'identifier'. got=%q", mapUpdate.Left.String())
+	}
+
+	if len(mapUpdate.Right) != 2 {
+		t.Fatalf("mapUpdate does not contain %d pairs. got=%d",
+			2, len(mapUpdate.Right))
+	}
+
+	testMapUpdateLiteral(t, mapUpdate)
+}
+
+func testMapUpdateLiteral(t *testing.T, ml *ast.MapUpdateLiteral) {
+	if ml.TokenLiteral() != "{" {
+		t.Errorf("ml.TokenLiteral not '{'. got=%q", ml.TokenLiteral())
+	}
+
+	if len(ml.Right) != 2 {
+		t.Errorf("ml.Pairs has wrong length. got=%d", len(ml.Right))
+	}
+
+	tests := map[string]string{
+		"key":        "value",
+		"anotherKey": "anotherValue",
+	}
+
+	for key, value := range ml.Right {
+		literal := key.(*ast.Identifier).Value
+		if tests[literal] != value.(*ast.StringLiteral).Value {
+			t.Errorf("ml.Pairs[%q] not '%s'. got=%q", literal, tests[literal], value.(*ast.StringLiteral).Value)
+		}
+	}
+}

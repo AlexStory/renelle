@@ -52,12 +52,14 @@ type HashKey struct {
 type HashTable struct {
 	Buckets []*list.List
 	Size    int
+	Length  int
 }
 
 func NewHashTable(size int) *HashTable {
 	return &HashTable{
 		Buckets: make([]*list.List, size),
 		Size:    size,
+		Length:  0,
 	}
 }
 
@@ -79,6 +81,7 @@ func (h *HashTable) Put(pair Pair) {
 			}
 		}
 	}
+	h.Length++
 	// If the key does not exist, add a new entry
 	h.Buckets[index].PushBack(pair)
 }
@@ -95,6 +98,18 @@ func (h *HashTable) Get(key Object) (Object, bool) {
 		}
 	}
 	return nil, false
+}
+
+func (h *HashTable) Keys() []Object {
+	var keys []Object
+	for _, bucket := range h.Buckets {
+		if bucket != nil {
+			for e := bucket.Front(); e != nil; e = e.Next() {
+				keys = append(keys, e.Value.(Pair).Key)
+			}
+		}
+	}
+	return keys
 }
 
 type Integer struct {
@@ -335,6 +350,20 @@ func (m *Map) Get(key Object) (Object, bool) {
 }
 func (m *Map) Put(key, value Object) {
 	m.Store.Put(Pair{Key: key, Value: value})
+}
+
+func (m *Map) Copy(newItems int) *Map {
+	hashTableSize := m.Store.Size + newItems
+	hashTable := NewHashTable(hashTableSize)
+	for _, key := range m.Store.Keys() {
+		value, _ := m.Store.Get(key)
+		hashTable.Put(Pair{Key: key, Value: value})
+	}
+	return &Map{Store: hashTable}
+}
+
+func (m *Map) Keys() []Object {
+	return m.Store.Keys()
 }
 
 type Env interface {

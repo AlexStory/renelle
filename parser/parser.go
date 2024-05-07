@@ -312,6 +312,10 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 }
 
 func (p *Parser) parseMapLiteral() ast.Expression {
+	if p.peekTokenIs(token.IDENT) && p.peekTokenTwoIs(token.WITH) {
+		return p.parseMapUpdateLiteral()
+	}
+
 	mapLiteral := &ast.MapLiteral{Token: p.curToken}
 	mapLiteral.Pairs = make(map[ast.Expression]ast.Expression)
 
@@ -339,6 +343,29 @@ func (p *Parser) parseMapLiteral() ast.Expression {
 	}
 
 	return mapLiteral
+}
+
+func (p *Parser) parseMapUpdateLiteral() ast.Expression {
+	mapUpdate := &ast.MapUpdateLiteral{Token: p.curToken}
+	p.nextToken() // {
+	mapUpdate.Left = p.parseIdentifier()
+	p.nextToken() // with
+
+	pairs := make(map[ast.Expression]ast.Expression)
+
+	for !p.peekTokenIs(token.RBRACE) && !p.peekTokenIs(token.EOF) {
+		p.nextToken()
+		key := p.parseExpression(LOWEST)
+		if !p.expectPeek(token.ASSIGN) {
+			return nil
+		}
+		p.nextToken()
+		val := p.parseExpression(LOWEST)
+		pairs[key] = val
+	}
+	p.nextToken()
+	mapUpdate.Right = pairs
+	return mapUpdate
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {

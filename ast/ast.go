@@ -503,6 +503,33 @@ func (ml *MapLiteral) String() string {
 	return out.String()
 }
 
+type MapUpdateLiteral struct {
+	Token token.Token // The 'with' token
+	Left  Expression
+	Right map[Expression]Expression
+
+	comments []string
+}
+
+func (ml *MapUpdateLiteral) expressionNode()      {}
+func (ml *MapUpdateLiteral) T() token.Token       { return ml.Token }
+func (ml *MapUpdateLiteral) TokenLiteral() string { return ml.Token.Literal }
+func (ml *MapUpdateLiteral) Comments() []string   { return ml.comments }
+func (ml *MapUpdateLiteral) AddComment(c string)  { ml.comments = append(ml.comments, c) }
+func (ml *MapUpdateLiteral) String() string {
+	var out bytes.Buffer
+	pairs := []string{}
+	for key, value := range ml.Right {
+		pairs = append(pairs, key.String()+" = "+value.String())
+	}
+	out.WriteString("{ ")
+	out.WriteString(ml.Left.String())
+	out.WriteString(" with ")
+	out.WriteString(strings.Join(pairs, " "))
+	out.WriteString(" }")
+	return out.String()
+}
+
 type CondExpression struct {
 	Token        token.Token // The 'cond' token
 	Conditions   []Expression

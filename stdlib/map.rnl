@@ -1,0 +1,7 @@
+module Map
+
+# Adds an item to a map
+
+fn put(map, key, value) {
+    { map with key = value }
+}

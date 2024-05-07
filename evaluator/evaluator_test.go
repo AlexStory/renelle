@@ -896,3 +896,39 @@ func TestEvalModule(t *testing.T) {
 
 	testIntegerObject(t, val, 20)
 }
+
+func TestMapUpdateLiteral(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected interface{}
+	}{
+		{`let m = {key: "value"}; let m2 = {m with :newKey = "newValue"}; m2.newKey`, "newValue"},
+		{`let m = {key: "value"}; let m2 = {m with :key = "newValue"}; m2.key`, "newValue"},
+		{`let m = {key: "value"}; let m2 = {m with :unknownKey = "newValue"}; m2.unknownKey`, "newValue"},
+		{`let m = 5; let m2 = {m with :key = "value"}; m2.key`, "not a map: INTEGER"},
+	}
+
+	for _, tt := range tests {
+		evaluated := testEval(tt.input)
+		switch expected := tt.expected.(type) {
+		case string:
+			strObj, ok := evaluated.(*object.String)
+			if !ok {
+				errObj, ok := evaluated.(*object.Error)
+				if ok {
+					if errObj.Message != expected {
+						t.Errorf("wrong error message. expected=%q, got=%q", expected, errObj.Message)
+					}
+				} else {
+					t.Errorf("object is not String or Error. got=%T (%+v)", evaluated, evaluated)
+				}
+				continue
+			}
+			if strObj.Value != expected {
+				t.Errorf("wrong string value. expected=%q, got=%q", expected, strObj.Value)
+			}
+		default:
+			testNilObject(t, evaluated)
+		}
+	}
+}

@@ -29,6 +29,7 @@ const (
 	STRING    = "STRING"
 	AND       = "AND"
 	OR        = "OR"
+	WITH      = "WITH"
 	ASSIGN    = "="
 	PLUS      = "+"
 	MINUS     = "-"
@@ -79,6 +80,7 @@ var TokenMap = map[string]TokenType{
 	"false":  FALSE,
 	"and":    AND,
 	"or":     OR,
+	"with":   WITH,
 }
 
 func LookupIdent(ident string) TokenType {

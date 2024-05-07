@@ -118,6 +118,8 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 
 	case *ast.MapLiteral:
 		return evalMapLiteral(node, env, ctx)
+	case *ast.MapUpdateLiteral:
+		return evalMapUpdateLiteral(node, env, ctx)
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env, ctx)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -521,6 +523,35 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, ctx 
 	default:
 		return newError(ctx.Line, ctx.Column, "property access not supported: %s", left.Type())
 	}
+}
+
+func evalMapUpdateLiteral(node *ast.MapUpdateLiteral, env *object.Environment, ctx *object.EvalContext) object.Object {
+	mapObj := Eval(node.Left, env, ctx)
+	if isError(mapObj) {
+		return mapObj
+	}
+
+	mapObjTyped, ok := mapObj.(*object.Map)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "not a map: %s", mapObj.Type())
+	}
+
+	mapCopy := mapObjTyped.Copy(len(node.Right))
+	for keyNode, valueNode := range node.Right {
+		key := Eval(keyNode, env, ctx)
+		if isError(key) {
+			return key
+		}
+
+		value := Eval(valueNode, env, ctx)
+		if isError(value) {
+			return value
+		}
+
+		mapCopy.Put(key, value)
+	}
+
+	return mapCopy
 }
 
 func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalContext) object.Object {
@@ -953,6 +984,8 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 		switch moduleName {
 		case "Array":
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
+		case "Map":
+			module.Environment.Set("length", &object.Builtin{Fn: hostlib.MapLength})
 		}
 		return module
 	}

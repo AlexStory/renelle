@@ -40,6 +40,7 @@ cat.name
 cond {
     true => "yes"
 }
+with
 `
 
 	tests := []struct {
@@ -142,7 +143,8 @@ cond {
 		{token.ARROW, "=>", 30, 10},
 		{token.STRING, "yes", 30, 13},
 		{token.RBRACE, "}", 31, 1},
-		{token.EOF, "", 32, 1},
+		{token.WITH, "with", 32, 1},
+		{token.EOF, "", 33, 1},
 	}
 
 	l := New(input)
