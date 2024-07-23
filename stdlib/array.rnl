@@ -1,11 +1,29 @@
 module Array
 
+# returns true if any element in the array matches the predicate, otherwise returns false
+fn any?(array, predicate) {
+    cond {
+        len(array) == 0 => false
+        predicate(head(array)) => true
+        true => any?(tail(array), predicate)
+    }
+}
+
 # returns the all the elements of two arrays combined in a new array
 fn concat(array1 array2) {
     if len(array2) == 0 {
         array1
     } else {
         concat(push(array1 head(array2)) tail(array2))
+    }
+}
+
+# returns whether the array contains the given element
+fn contains?(array, element) {
+    cond {
+        len(array) == 0        => false
+        head(array) == element => true
+        true                   => contains?(tail(array), element)
     }
 }
 
@@ -30,6 +48,16 @@ fn _filter(array acc f) {
         }
     }
 }
+
+# returns the first element of the array that returns true for the given function
+fn find(array f) {
+    cond {
+        len(array) == 0 => :nil
+        f(head(array))  => head(array)
+        true            => find(tail(array), f)
+    }
+}
+
 
 # Returns the first element of the array.
 let _head = head
@@ -120,6 +148,15 @@ fn sum(array) {
 let _tail = tail
 fn tail(array) {
     _tail(array)
+}
+
+# Attempts to find the first element in the array that satisfies the given function, returing (:some, element) if found, or :none if not
+fn try_find(array f) {
+    cond {
+        len(array) == 0 => :none
+        f(head(array))  => (:some, head(array))
+        true            => try_find(tail(array), f)
+    }
 }
 
 # Returns a new array with elements of both arrays combined in tuples

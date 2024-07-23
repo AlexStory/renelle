@@ -1,0 +1,39 @@
+module Option
+
+# returns the value of the option if it is a Some, otherwise returns the given default value
+fn default(option default) {
+    case option {
+        (:some value) => value
+        :none         => default
+    }
+}
+
+# returns true if the given value is an option, otherwise returns false
+fn is_option?(value) {
+    case value {
+        (:some _) => true
+        :none     => true
+        _         => false
+    }
+}
+
+# applies the given function to the value of the option if it is a Some, otherwise returns None
+fn map(option f) {
+    case option {
+        (:some value) => (:some f(value))
+        :none         => :none
+    }
+}
+
+# wraps a value in a Some
+fn some(value) {
+    (:some value)
+}
+
+# returns true if the option is a Some, otherwise returns false
+fn some?(option) {
+    case option {
+        (:some _) => true
+        :none     => false
+    }
+}
