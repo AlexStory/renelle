@@ -321,14 +321,17 @@ func (m *Map) Inspect() string {
 func (m *Map) HashKey() HashKey {
 	hasher := fnv.New64a()
 	for _, bucket := range m.Store.Buckets {
-		for e := bucket.Front(); e != nil; e = e.Next() {
-			pair := e.Value.(Pair)
-			key, keyOk := pair.Key.(Hashable)
-			value, valueOk := pair.Value.(Hashable)
-			if keyOk && valueOk {
-				keyHash := key.HashKey().Value
-				valueHash := value.HashKey().Value
-				hasher.Write([]byte(fmt.Sprintf("%s%d%s%d", key.HashKey().Type, keyHash, value.HashKey().Type, valueHash)))
+		if bucket != nil {
+
+			for e := bucket.Front(); e != nil; e = e.Next() {
+				pair := e.Value.(Pair)
+				key, keyOk := pair.Key.(Hashable)
+				value, valueOk := pair.Value.(Hashable)
+				if keyOk && valueOk {
+					keyHash := key.HashKey().Value
+					valueHash := value.HashKey().Value
+					hasher.Write([]byte(fmt.Sprintf("%s%d%s%d", key.HashKey().Type, keyHash, value.HashKey().Type, valueHash)))
+				}
 			}
 		}
 	}
@@ -437,14 +440,19 @@ func Equals(a, b Object) bool {
 		}
 		for i, bucketA := range a.Store.Buckets {
 			bucketB := b.Store.Buckets[i]
-			if bucketA.Len() != bucketB.Len() {
+			if (bucketA == nil && bucketB != nil) || (bucketA != nil && bucketB == nil) {
 				return false
 			}
-			for eA, eB := bucketA.Front(), bucketB.Front(); eA != nil && eB != nil; eA, eB = eA.Next(), eB.Next() {
-				pairA := eA.Value.(Pair)
-				pairB := eB.Value.(Pair)
-				if !Equals(pairA.Key, pairB.Key) || !Equals(pairA.Value, pairB.Value) {
-					return false
+			if bucketA != nil && bucketB != nil && bucketA.Len() != bucketB.Len() {
+				return false
+			}
+			if bucketA != nil && bucketB != nil {
+				for eA, eB := bucketA.Front(), bucketB.Front(); eA != nil && eB != nil; eA, eB = eA.Next(), eB.Next() {
+					pairA := eA.Value.(Pair)
+					pairB := eB.Value.(Pair)
+					if !Equals(pairA.Key, pairB.Key) || !Equals(pairA.Value, pairB.Value) {
+						return false
+					}
 				}
 			}
 		}
