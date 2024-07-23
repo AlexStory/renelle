@@ -1,0 +1,9 @@
+let add = \x y => x + y
+let sub = \x y => x - y
+
+let ops = {
+    add = "+"
+    sub = "-"
+}
+
+print(ops@add) # returns "+"

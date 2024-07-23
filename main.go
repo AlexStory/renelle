@@ -14,6 +14,7 @@ import (
 	"renelle/object"
 	"renelle/parser"
 	"renelle/repl"
+	"strings"
 )
 
 func main() {
@@ -52,6 +53,34 @@ func main() {
 
 			filename := filepath.Join(dir, "src", "main.rnl")
 			runFile(filename, moduleName, args[1:])
+		case "test":
+			fmt.Printf("Test command not implemented yet\n")
+			var dir string
+			if len(args) > 1 {
+				dir = args[1]
+			} else {
+				dir = "./test"
+			}
+
+			err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				if !info.IsDir() && strings.HasSuffix(path, "_test.rnl") {
+					// Run the tests in the file
+					fmt.Printf("Running tests in %s\n", path)
+					// TODO: Implement the function to run the tests
+					// runTests(path)
+				}
+
+				return nil
+			})
+
+			if err != nil {
+				fmt.Printf("Error walking the path %v: %v\n", dir, err)
+				os.Exit(1)
+			}
 		default:
 			filename := args[0]
 			content, err := os.ReadFile(filename)

@@ -168,4 +168,24 @@ var builtins = map[string]*object.Builtin{
 			return &object.String{Value: string(args[0].Type())}
 		},
 	},
+	"test": {
+		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {
+			if len(args) != 2 {
+				return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=2", len(args))
+			}
+
+			if args[0].Type() != object.BOOLEAN_OBJ {
+				return newError(ctx.Line, ctx.Column, "first argument to `test` must be BOOLEAN, got %s", args[0].Type())
+			}
+
+			if args[1].Type() != object.STRING_OBJ {
+				return newError(ctx.Line, ctx.Column, "second argument to `test` must be STRING, got %s", args[1].Type())
+			}
+
+			if args[0].(*object.Boolean) == constants.FALSE {
+				fmt.Printf("Test failed: %s\n", args[1].(*object.String).Value)
+			}
+			return constants.OK
+		},
+	},
 }

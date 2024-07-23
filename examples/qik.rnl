@@ -1,0 +1,3 @@
+let cat = { name: "hayley"}
+let kids = { cat = "toothless" }
+print(kids @ cat)

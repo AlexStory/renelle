@@ -726,6 +726,8 @@ func evalInfixExpression(operator string, left, right object.Object, line, col i
 		return evalFloatInfixExpression(operator, &object.Float{Value: float64(left.(*object.Integer).Value)}, right)
 	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
 		return evalStringInfixExpression(operator, left, right, line, col)
+	case left.Type() == object.ARRAY_OBJ && right.Type() == object.ARRAY_OBJ:
+		return evalArrayInfixExpression(operator, left, right, line, col)
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -820,6 +822,37 @@ func evalStringInfixExpression(operator string, left, right object.Object, line,
 		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 
+}
+
+func evalArrayInfixExpression(operator string, left, right object.Object, line, col int) object.Object {
+	leftVal := left.(*object.Array)
+	rightVal := right.(*object.Array)
+	switch operator {
+	case "+":
+		return &object.Array{Elements: append(leftVal.Elements, rightVal.Elements...)}
+	case "==":
+		if len(leftVal.Elements) != len(rightVal.Elements) {
+			return constants.FALSE
+		}
+		for i, el := range leftVal.Elements {
+			if !object.Equals(el, rightVal.Elements[i]) {
+				return constants.FALSE
+			}
+		}
+		return constants.TRUE
+	case "!=":
+		if len(leftVal.Elements) != len(rightVal.Elements) {
+			return constants.TRUE
+		}
+		for i, el := range leftVal.Elements {
+			if !object.Equals(el, rightVal.Elements[i]) {
+				return constants.TRUE
+			}
+		}
+		return constants.FALSE
+	default:
+		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
 }
 
 func evalBangOperatorExpression(right object.Object) object.Object {
