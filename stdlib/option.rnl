@@ -1,5 +1,13 @@
 module Option
 
+# applies the given function to the value of the option if it is a Some, otherwise returns None
+fn bind(option f) {
+    case option {
+        (:some value) => f(value)
+        :none         => :none
+    }
+}
+
 # returns the value of the option if it is a Some, otherwise returns the given default value
 fn default(option default) {
     case option {

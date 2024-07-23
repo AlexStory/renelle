@@ -1,5 +1,14 @@
 module Array
 
+# returns true if all elements in the array match the predicate, otherwise returns false
+fn all?(array, predicate) {
+    cond {
+        len(array) == 0 => true
+        !predicate(head(array)) => false
+        true => all?(tail(array), predicate)
+    }
+}
+
 # returns true if any element in the array matches the predicate, otherwise returns false
 fn any?(array, predicate) {
     cond {
