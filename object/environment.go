@@ -69,9 +69,10 @@ func (e *Environment) Root() *Environment {
 type MetaData = map[string]interface{}
 
 type EvalContext struct {
-	MetaData *MetaData
-	Line     int
-	Column   int
+	MetaData       *MetaData
+	Line           int
+	Column         int
+	IsTailPosition bool
 }
 
 func NewEvalContext() *EvalContext {
@@ -79,7 +80,8 @@ func NewEvalContext() *EvalContext {
 		MetaData: &MetaData{
 			"args": make([]string, 0),
 		},
-		Line:   1,
-		Column: 1,
+		Line:           1,
+		Column:         1,
+		IsTailPosition: false,
 	}
 }

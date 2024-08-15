@@ -54,7 +54,9 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		return evalBlockStatements(node.Statements, env, ctx)
 
 	case *ast.ReturnStatement:
+		ctx.IsTailPosition = true
 		val := Eval(node.ReturnValue, env, ctx)
+		ctx.IsTailPosition = false
 		if isError(val) {
 			return val
 		}
@@ -275,6 +277,37 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		args := evalExpressions(node.Arguments, env, ctx)
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
+		}
+
+		if ctx.IsTailPosition {
+			var statements []ast.Statement
+			switch fn := node.Function.(type) {
+			case *ast.Identifier:
+				if obj, ok := env.Get(fn.Value); ok {
+					if fnObj, ok := obj.(*object.Function); ok {
+						statements = fnObj.Body.Statements
+						for i, param := range fnObj.Parameters {
+							env.Set(param.Value, args[i])
+						}
+					} else {
+						return newError(ctx.Line, ctx.Column, "not a function: %s", fn.Value)
+					}
+				} else {
+					return newError(ctx.Line, ctx.Column, "function %s not found", fn.Value)
+				}
+			case *ast.FunctionLiteral:
+				statements = fn.Body.Statements
+				for i, param := range fn.Parameters {
+					env.Set(param.Value, args[i])
+				}
+			default:
+				return newError(ctx.Line, ctx.Column, "not a function: %s", fn.String())
+			}
+			ctx.IsTailPosition = false
+			return &object.RecursionNode{
+				Env:        env,
+				Statements: statements,
+			}
 		}
 
 		return applyFunction(function, args, ctx)
@@ -603,17 +636,40 @@ func evalProgram(stmts []ast.Statement, env *object.Environment, ctx *object.Eva
 func evalBlockStatements(stmts []ast.Statement, env *object.Environment, ctx *object.EvalContext) object.Object {
 	var result object.Object
 
-	for _, statement := range stmts {
+	i := 0
+
+	for {
+		if i >= len(stmts) {
+			break
+		}
+
+		statement := stmts[i]
+		if i == len(stmts)-1 {
+			ctx.IsTailPosition = true
+		} else {
+			ctx.IsTailPosition = false
+		}
 		result = Eval(statement, env, ctx)
+
+		if recursionNode, ok := result.(*object.RecursionNode); ok {
+			// force gc mark?
+			env = nil
+			stmts = nil
+
+			env = recursionNode.Env
+			stmts = recursionNode.Statements
+			i = 0
+			continue
+		}
 
 		rt := result.Type()
 		if rt == object.RETURN_VALUE_OBJ || rt == object.ERROR_OBJ {
 			return result
 		}
+		i++
 	}
 
 	return result
-
 }
 
 func evalIndexExpression(left, index object.Object, line, col int) object.Object {

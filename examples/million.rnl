@@ -1,0 +1,12 @@
+fn run(n) {
+    let n2 = n - 1
+    if n > 0 {
+        print(n)
+        run(n2)
+    }
+}
+
+fn main() {
+    run(1_000_000)
+    print("done")
+}

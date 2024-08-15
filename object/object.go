@@ -384,6 +384,14 @@ func (m *Module) Inspect() string {
 	return fmt.Sprintf("module %s", m.Name)
 }
 
+type RecursionNode struct {
+	Env        *Environment
+	Statements []ast.Statement
+}
+
+func (rn *RecursionNode) Type() ObjectType { return "RECURSION" }
+func (rn *RecursionNode) Inspect() string  { return "Recursion Node" }
+
 func Equals(a, b Object) bool {
 	switch a := a.(type) {
 	case *Integer:
