@@ -74,6 +74,14 @@ fn head(array) {
     _head(array)
 }
 
+# Run the function on each element of the array
+fn iter(array, f) {
+    if len(array) > 0 {
+        f(head(array))
+        iter(tail(array), f)
+    }
+}
+
 # Joins all elements of the array into a string.
 
 fn join(array, separator) {

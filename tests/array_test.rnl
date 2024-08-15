@@ -1,5 +1,3 @@
-
-
 fn test_any?() {
     let a = [1 2 3]
     let expected = true
@@ -26,7 +24,7 @@ fn test_contains?() {
     test(expected == actual, "test_contains? true path failed")
 
     let expected = false
-    let actual = Array.contains?(a, 4)
+    let actual = Array.contains?(a, 5)
     test(expected == actual, "test_contains? false path failed")
 }
 
