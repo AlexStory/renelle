@@ -240,10 +240,15 @@ type Array struct {
 
 func (ao *Array) Type() ObjectType { return ARRAY_OBJ }
 func (ao *Array) Inspect() string {
+	const maxElements = 3
 	var out bytes.Buffer
 
 	elements := []string{}
-	for _, el := range ao.Elements {
+	for i, el := range ao.Elements {
+		if i > maxElements {
+			elements = append(elements, "...")
+			break
+		}
 		elements = append(elements, el.Inspect())
 	}
 

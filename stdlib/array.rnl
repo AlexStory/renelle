@@ -4,8 +4,13 @@ module Array
 fn all?(array, predicate) {
     cond {
         len(array) == 0 => true
-        !predicate(head(array)) => false
-        true => all?(tail(array), predicate)
+        true => Array.reduce_while(array, true \_ x => {
+            if predicate(x) {
+                (:cont true)
+            } else {
+                (:halt false)
+            }
+        })
     }
 }
 
@@ -13,27 +18,30 @@ fn all?(array, predicate) {
 fn any?(array, predicate) {
     cond {
         len(array) == 0 => false
-        predicate(head(array)) => true
-        true => any?(tail(array), predicate)
+        true => Array.reduce_while(array, false \_ x => {
+            if predicate(x) {
+                (:halt true)
+            } else {
+                (:cont false)
+            }
+        })
     }
 }
 
 # returns the all the elements of two arrays combined in a new array
 fn concat(array1 array2) {
-    if len(array2) == 0 {
-        array1
-    } else {
-        concat(push(array1 head(array2)) tail(array2))
-    }
+    Array.reduce(array2, array1, \acc x => push(acc, x))
 }
 
 # returns whether the array contains the given element
 fn contains?(array, element) {
-    cond {
-        len(array) == 0        => false
-        head(array) == element => true
-        true                   => contains?(tail(array), element)
-    }
+    Array.reduce_while(array, false \_ x => {
+        if x == element {
+            (:halt true)
+        } else {
+            (:cont false)
+        }
+    })
 }
 
 # returns true if an array is empty
@@ -43,28 +51,40 @@ fn empty?(array) {
 
 # returns a new array, with all elements that return true for the given function
 fn filter(array f) {
-    _filter(array, [], f)
-}
-
-fn _filter(array acc f) {
-    if len(array) == 0 {
-        acc
-    } else {
-        if f(head(array)) {
-            _filter(tail(array), push(acc, head(array)), f)
+    Array.reduce(array, [], \acc x => {
+        if f(x) {
+            push(acc, x)
         } else {
-            _filter(tail(array), acc, f)
+            acc
         }
-    }
+    })
 }
 
 # returns the first element of the array that returns true for the given function
 fn find(array f) {
-    cond {
-        len(array) == 0 => :nil
-        f(head(array))  => head(array)
-        true            => find(tail(array), f)
+    Array.reduce_while(array, :nil \_ x => {
+        if f(x) {
+            (:halt x)
+        } else {
+            (:cont :nil)
+        }
+    })
+}
+
+# returns the index of the first element that returns true for the given function
+fn find_index(array f) {
+    let indexed = Array.with_index(array)
+    Array.find(indexed, \x => {
+        let (_, elem) = x
+        f(elem)
+    })
+    |> \x => {
+        case x {
+            :nil => :nil
+            (index, _) => index
+        }
     }
+
 }
 
 
@@ -75,29 +95,17 @@ fn head(array) {
 }
 
 # Run the function on each element of the array
-fn iter(array, f) {
-    if len(array) > 0 {
-        f(head(array))
-        iter(tail(array), f)
-    }
-}
+# fn iter(array, f) {
+#     if len(array) > 0 {
+#         f(head(array))
+#         iter(tail(array), f)
+#     }
+# }
 
 # Joins all elements of the array into a string.
 
 fn join(array, separator) {
-    _join(array, separator, "")
-}
-
-fn _join(array, separator, acc) {
-    if len(array) == 0 {
-        acc
-    } else {
-        if len(acc) == 0 {
-            _join(tail(array), separator, head(array))
-        } else {
-            _join(tail(array), separator, acc + separator + head(array))
-        }
-    }
+    Array.reduce(array, \acc x => acc + separator + x)
 }
 
 # Returns the number of elements in the array.
@@ -107,15 +115,7 @@ fn length(array) {
 
 # Applies a function to each element of the array and returns the resulting array.
 fn map(array, f) {
-    _map(array, [], f)
-}
-
-fn _map(array, acc, f) {
-    if length(array) == 0 {
-        acc
-    } else {
-        _map(tail(array), push(acc, f(head(array))), f)
-    }
+    Array.reduce(array, [], \acc x => push(acc, f(x)))
 }
 
 # recursively sorts the array
@@ -142,18 +142,17 @@ fn quicksort_by(array, f) {
     }
 }
 
-# Returns an accumulator, created by applying the function to each element of the array
-
-fn reduce(array, acc, f) {
-    _reduce(array, acc, f)
-}
-
-fn _reduce(array, acc, f) {
-    if len(array) == 0 {
-        acc
-    } else {
-        _reduce(tail(array), f(acc, head(array)), f)
-    }
+# Updates the element at the given index with the given value
+fn replace_at(array, index, value) {
+    Array.reduce(array, (0, []), \acc x => {
+        let (i, result) = acc
+        if i == index {
+            (i + 1, push(result, value))
+        } else {
+            (i + 1, push(result, x))
+        }
+    })
+    |> \x => x @ 1
 }
 
 # Sums all items in the array
@@ -171,37 +170,58 @@ fn tail(array) {
 fn try_find(array f) {
     cond {
         len(array) == 0 => :none
-        f(head(array))  => (:some, head(array))
-        true            => try_find(tail(array), f)
+        true => Array.reduce_while(array, :none \_ x => {
+            if f(x) {
+                (:halt :some x)
+            } else {
+                (:cont :none)
+            }
+        })
     }
+}
+
+# returns a tuple of all elements in the array paired with their index
+fn with_index(array) {
+    Array.reduce(array, (0, []), \acc elem => {
+        let (index, result) = acc
+        (index + 1, push(result, (index, elem)))
+    })
+    |> \x => x @ 1
 }
 
 # Returns a new array with elements of both arrays combined in tuples
 fn zip(array1 array2) {
-    _zip(array1, array2, [])
+    let len1 = len(array1)
+    let len2 = len(array2)
+    let min_len = if len1 < len2 { len1 } else { len2 }
+    Array.reduce_while(array1, (0, []), \acc x => {
+        let (index, result) = acc
+        if index < min_len {
+            let i = index + 1
+            let new = push(result, (x, array2 @ index))
+            (:cont (i, new))
+        } else {
+            (:halt acc)
+        }
+    })
+    |> \x => x @ 1
 }
 
-fn _zip(array1 array2 acc) {
-    if len(array1) == 0 or len(array2) == 0 {
-        acc
-    } else {
-        _zip(tail(array1), tail(array2), push(acc, [(head(array1), head(array2))]))
-    }
-}
-
+# Returns a new array with elements of both arrays combined in tuples, applying the given function to each pair
 fn zip_with(array1 array2 f) {
-    _zip_with(array1, array2, [], f)
+    let len1 = len(array1)
+    let len2 = len(array2)
+    let min_len = if len1 < len2 { len1 } else { len2 }
+    Array.reduce_while(array1, (0, []), \acc x => {
+        let (index, result) = acc
+        if index < min_len {
+            let i = index + 1
+            let new = push(result, f(x, array2 @ index))
+            (:cont (i, new))
+        } else {
+            (:halt acc)
+        }
+    })
+    |> \x => x @ 1
 }
 
-fn _zip_with(array1 array2 acc f) {
-    if len(array1) == 0 or len(array2) == 0 {
-        acc
-    } else {
-        _zip_with(
-            tail(array1)
-            tail(array2)
-            push(acc, f(head(array1), head(array2)))
-            f
-        )
-    }
-}

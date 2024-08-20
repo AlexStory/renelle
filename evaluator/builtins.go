@@ -8,6 +8,151 @@ import (
 	"renelle/object"
 )
 
+func reduceWhile(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 && len(args) != 3 {
+		return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=2 or 3", len(args))
+	}
+
+	list, ok := args[0].(*object.Array)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "first argument to `reduce_while` must be ARRAY, got %s", args[0].Type())
+	}
+
+	var initial object.Object
+	var fn *object.Function
+	var startIndex int
+
+	if len(args) == 2 {
+		if len(list.Elements) == 0 {
+			return newError(ctx.Line, ctx.Column, "cannot reduce empty array without initial value")
+		}
+		initial = list.Elements[0]
+		fn, ok = args[1].(*object.Function)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "second argument to `reduce_while` must be FUNCTION, got %s", args[1].Type())
+		}
+		startIndex = 1
+	} else {
+		initial = args[1]
+		fn, ok = args[2].(*object.Function)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "third argument to `reduce_while` must be FUNCTION, got %s", args[2].Type())
+		}
+		startIndex = 0
+	}
+
+	accumulator := initial
+	for i := startIndex; i < len(list.Elements); i++ {
+		elem := list.Elements[i]
+		result := applyFunction(fn, []object.Object{accumulator, elem}, ctx)
+		if result.Type() == object.ERROR_OBJ {
+			return result
+		}
+
+		tuple, ok := result.(*object.Tuple)
+		if !ok || len(tuple.Elements) != 2 {
+			return newError(ctx.Line, ctx.Column, "function must return a tuple of (:cont, acc) or (:halt, acc)")
+		}
+
+		action, ok := tuple.Elements[0].(*object.Atom)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "first element of tuple must be an atom, got %s", tuple.Elements[0].Type())
+		}
+
+		accumulator = tuple.Elements[1]
+
+		if action.Value == "halt" {
+			break
+		} else if action.Value != "cont" {
+			return newError(ctx.Line, ctx.Column, "first element of tuple must be :cont or :halt, got %s", action.Value)
+		}
+	}
+
+	return accumulator
+}
+
+func iter(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 {
+		return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=2", len(args))
+	}
+
+	list, ok := args[0].(*object.Array)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "first argument to `iter` must be ARRAY, got %s", args[0].Type())
+	}
+
+	var fn object.Object
+	switch arg := args[1].(type) {
+	case *object.Function:
+		fn = arg
+	case *object.Builtin:
+		fn = arg
+	default:
+		return newError(ctx.Line, ctx.Column, "second argument to `iter` must be FUNCTION or BUILTIN, got %s", args[1].Type())
+	}
+
+	for i := 0; i < len(list.Elements); i++ {
+		var result object.Object
+		if function, ok := fn.(*object.Function); ok {
+			result = applyFunction(function, []object.Object{list.Elements[i]}, ctx)
+		} else if builtin, ok := fn.(*object.Builtin); ok {
+			result = builtin.Fn(ctx, []object.Object{list.Elements[i]}...)
+		}
+
+		if result.Type() == object.ERROR_OBJ {
+			return result
+		}
+	}
+
+	return constants.OK
+}
+
+func reduce(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 && len(args) != 3 {
+		return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=2 or 3", len(args))
+	}
+
+	list, ok := args[0].(*object.Array)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "first argument to `reduce` must be ARRAY, got %s", args[0].Type())
+	}
+
+	var initial object.Object
+	var fn *object.Function
+	var startIndex int
+
+	if len(args) == 2 {
+		if len(list.Elements) == 0 {
+			return newError(ctx.Line, ctx.Column, "cannot reduce empty array without initial value")
+		}
+		initial = list.Elements[0]
+		fn, ok = args[1].(*object.Function)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "second argument to `reduce` must be FUNCTION, got %s", args[1].Type())
+		}
+		startIndex = 1
+	} else {
+		initial = args[1]
+		fn, ok = args[2].(*object.Function)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "third argument to `reduce` must be FUNCTION, got %s", args[2].Type())
+		}
+		startIndex = 0
+	}
+
+	accumulator := initial
+	for i := startIndex; i < len(list.Elements); i++ {
+		elem := list.Elements[i]
+		result := applyFunction(fn, []object.Object{accumulator, elem}, ctx)
+		if result.Type() == object.ERROR_OBJ {
+			return result
+		}
+		accumulator = result
+	}
+
+	return accumulator
+}
+
 var builtins = map[string]*object.Builtin{
 	"len": {
 		Fn: func(ctx *object.EvalContext, args ...object.Object) object.Object {

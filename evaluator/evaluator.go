@@ -1011,7 +1011,11 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 	if module, ok := env.GetModule(moduleName); ok {
 		switch moduleName {
 		case "Array":
+			module.Environment.Set("iter", &object.Builtin{Fn: iter})
+			module.Environment.Set("range", &object.Builtin{Fn: hostlib.ArrayRange})
 			module.Environment.Set("reverse", &object.Builtin{Fn: hostlib.ArrayReverse})
+			module.Environment.Set("reduce", &object.Builtin{Fn: reduce})
+			module.Environment.Set("reduce_while", &object.Builtin{Fn: reduceWhile})
 		case "File":
 			module.Environment.Set("open", &object.Builtin{Fn: hostlib.FileOpen})
 			module.Environment.Set("open!", &object.Builtin{Fn: hostlib.FileOpenBang})
