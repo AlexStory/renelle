@@ -949,6 +949,200 @@ func TestStringLiteralExpression(t *testing.T) {
 		t.Errorf("literal.Value not %q. got=%q", "hello world", literal.Value)
 	}
 }
+func TestInterpolatedStringLiteral_NoExpressions(t *testing.T) {
+	input := `$"hello world"`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.InterpolatedStringLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.InterpolatedStringLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(literal.Segments) != 1 {
+		t.Fatalf("wrong number of segments. expected=1, got=%d", len(literal.Segments))
+	}
+
+	strSegment, ok := literal.Segments[0].(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("segment not *ast.StringLiteral. got=%T", literal.Segments[0])
+	}
+
+	if strSegment.Value != "hello world" {
+		t.Errorf("literal.Value not %q. got=%q", "hello world", strSegment.Value)
+	}
+}
+
+func TestInterpolatedStringLiteral_OneExpression(t *testing.T) {
+	input := `$"hello {name}"`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.InterpolatedStringLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.InterpolatedStringLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(literal.Segments) != 2 {
+		t.Fatalf("wrong number of segments. expected=2, got=%d", len(literal.Segments))
+	}
+
+	strSegment, ok := literal.Segments[0].(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("segment not *ast.StringLiteral. got=%T", literal.Segments[0])
+	}
+
+	if strSegment.Value != "hello " {
+		t.Errorf("literal.Value not %q. got=%q", "hello ", strSegment.Value)
+	}
+
+	exprSegment, ok := literal.Segments[1].(*ast.Identifier)
+	if !ok {
+		t.Fatalf("segment not *ast.Identifier. got=%T", literal.Segments[1])
+	}
+
+	if exprSegment.Value != "name" {
+		t.Errorf("identifier.Value not %q. got=%q", "name", exprSegment.Value)
+	}
+}
+
+func TestInterpolatedStringLiteral_MultipleExpressions(t *testing.T) {
+	input := `$"hello {name}, you have {count} new messages"`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt := program.Statements[0].(*ast.ExpressionStatement)
+	literal, ok := stmt.Expression.(*ast.InterpolatedStringLiteral)
+	if !ok {
+		t.Fatalf("exp not *ast.InterpolatedStringLiteral. got=%T", stmt.Expression)
+	}
+
+	if len(literal.Segments) != 5 {
+		t.Fatalf("wrong number of segments. expected=5, got=%d", len(literal.Segments))
+	}
+
+	strSegment1, ok := literal.Segments[0].(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("segment not *ast.StringLiteral. got=%T", literal.Segments[0])
+	}
+
+	if strSegment1.Value != "hello " {
+		t.Errorf("literal.Value not %q. got=%q", "hello ", strSegment1.Value)
+	}
+
+	exprSegment1, ok := literal.Segments[1].(*ast.Identifier)
+	if !ok {
+		t.Fatalf("segment not *ast.Identifier. got=%T", literal.Segments[1])
+	}
+
+	if exprSegment1.Value != "name" {
+		t.Errorf("identifier.Value not %q. got=%q", "name", exprSegment1.Value)
+	}
+
+	strSegment2, ok := literal.Segments[2].(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("segment not *ast.StringLiteral. got=%T", literal.Segments[2])
+	}
+
+	if strSegment2.Value != ", you have " {
+		t.Errorf("literal.Value not %q. got=%q", ", you have ", strSegment2.Value)
+	}
+
+	exprSegment2, ok := literal.Segments[3].(*ast.Identifier)
+	if !ok {
+		t.Fatalf("segment not *ast.Identifier. got=%T", literal.Segments[3])
+	}
+
+	if exprSegment2.Value != "count" {
+		t.Errorf("identifier.Value not %q. got=%q", "count", exprSegment2.Value)
+	}
+
+	strSegment3, ok := literal.Segments[4].(*ast.StringLiteral)
+	if !ok {
+		t.Fatalf("segment not *ast.StringLiteral. got=%T", literal.Segments[4])
+	}
+
+	if strSegment3.Value != " new messages" {
+		t.Errorf("literal.Value not %q. got=%q", " new messages", strSegment3.Value)
+	}
+}
+func TestParseStringSegments(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected []ast.Expression
+	}{
+		{
+			input: `hello world`,
+			expected: []ast.Expression{
+				&ast.StringLiteral{Value: "hello world"},
+			},
+		},
+		{
+			input: `hello {name}`,
+			expected: []ast.Expression{
+				&ast.StringLiteral{Value: "hello "},
+				&ast.Identifier{Value: "name"},
+			},
+		},
+		{
+			input: `hello {name}, you have {count} new messages`,
+			expected: []ast.Expression{
+				&ast.StringLiteral{Value: "hello "},
+				&ast.Identifier{Value: "name"},
+				&ast.StringLiteral{Value: ", you have "},
+				&ast.Identifier{Value: "count"},
+				&ast.StringLiteral{Value: " new messages"},
+			},
+		},
+		{
+			input: `hello \{name}`,
+			expected: []ast.Expression{
+				&ast.StringLiteral{Value: "hello {name}"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		p := &Parser{}
+		segments := p.parseStringSegments(tt.input)
+
+		if len(segments) != len(tt.expected) {
+			t.Fatalf("wrong number of segments. expected=%d, got=%d", len(tt.expected), len(segments))
+		}
+
+		for i, segment := range segments {
+			switch expected := tt.expected[i].(type) {
+			case *ast.StringLiteral:
+				actual, ok := segment.(*ast.StringLiteral)
+				if !ok {
+					t.Fatalf("segment not *ast.StringLiteral. got=%T", segment)
+				}
+				if actual.Value != expected.Value {
+					t.Errorf("literal.Value not %q. got=%q", expected.Value, actual.Value)
+				}
+			case *ast.Identifier:
+				actual, ok := segment.(*ast.Identifier)
+				if !ok {
+					t.Fatalf("segment not *ast.Identifier. got=%T", segment)
+				}
+				if actual.Value != expected.Value {
+					t.Errorf("identifier.Value not %q. got=%q", expected.Value, actual.Value)
+				}
+			}
+		}
+	}
+}
 
 func TestParsingArrayLiterals(t *testing.T) {
 	input := "[1 2 * 2 3 + 3]"
