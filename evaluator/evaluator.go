@@ -818,6 +818,14 @@ func evalStringInfixExpression(operator string, left, right object.Object, line,
 		return nativeBoolToBooleanObject(leftVal == rightVal)
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
+	case "<":
+		return nativeBoolToBooleanObject(leftVal < rightVal)
+	case ">":
+		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case "<=":
+		return nativeBoolToBooleanObject(leftVal <= rightVal)
+	case ">=":
+		return nativeBoolToBooleanObject(leftVal >= rightVal)
 	default:
 		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
@@ -1025,6 +1033,36 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
 			module.Environment.Set("keys", &object.Builtin{Fn: hostlib.MapKeys})
 			module.Environment.Set("length", &object.Builtin{Fn: hostlib.MapLength})
+		case "Math":
+			module.Environment.Set("abs", &object.Builtin{Fn: hostlib.MathAbs})
+			module.Environment.Set("ceiling", &object.Builtin{Fn: hostlib.MathCeil})
+			module.Environment.Set("cos", &object.Builtin{Fn: hostlib.MathCos})
+			module.Environment.Set("floor", &object.Builtin{Fn: hostlib.MathFloor})
+			module.Environment.Set("max", &object.Builtin{Fn: hostlib.MathMax})
+			module.Environment.Set("min", &object.Builtin{Fn: hostlib.MathMin})
+			module.Environment.Set("pi", &object.Builtin{Fn: hostlib.MathPi})
+			module.Environment.Set("round", &object.Builtin{Fn: hostlib.MathRound})
+			module.Environment.Set("sin", &object.Builtin{Fn: hostlib.MathSin})
+			module.Environment.Set("sqrt", &object.Builtin{Fn: hostlib.MathSqrt})
+			module.Environment.Set("tan", &object.Builtin{Fn: hostlib.MathTan})
+		case "String":
+			module.Environment.Set("concat", &object.Builtin{Fn: hostlib.StringConcat})
+			module.Environment.Set("contains?", &object.Builtin{Fn: hostlib.StringContains})
+			module.Environment.Set("ends_with?", &object.Builtin{Fn: hostlib.StringEndsWith})
+			module.Environment.Set("index_of", &object.Builtin{Fn: hostlib.StringIndexOf})
+			module.Environment.Set("length", &object.Builtin{Fn: hostlib.StringLength})
+			module.Environment.Set("lower", &object.Builtin{Fn: hostlib.StringLower})
+			module.Environment.Set("match?", &object.Builtin{Fn: hostlib.StringMatch})
+			module.Environment.Set("pad_left", &object.Builtin{Fn: hostlib.StringPadLeft})
+			module.Environment.Set("pad_right", &object.Builtin{Fn: hostlib.StringPadRight})
+			module.Environment.Set("replace", &object.Builtin{Fn: hostlib.StringReplace})
+			module.Environment.Set("replace_all", &object.Builtin{Fn: hostlib.StringReplaceAll})
+			module.Environment.Set("split", &object.Builtin{Fn: hostlib.StringSplit})
+			module.Environment.Set("starts_with?", &object.Builtin{Fn: hostlib.StringStartsWith})
+			module.Environment.Set("trim", &object.Builtin{Fn: hostlib.StringTrim})
+			module.Environment.Set("trim_end", &object.Builtin{Fn: hostlib.StringTrimEnd})
+			module.Environment.Set("trim_start", &object.Builtin{Fn: hostlib.StringTrimStart})
+			module.Environment.Set("upper", &object.Builtin{Fn: hostlib.StringUpper})
 		}
 		return module
 	}
