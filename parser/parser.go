@@ -81,6 +81,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.INT, p.parseIntegerLiteral)
 	p.registerPrefix(token.FLOAT, p.parseFloatLitearl)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
+	p.registerPrefix(token.INTERPOLATED, p.parseInterpolatedStringLiteral)
 	p.registerPrefix(token.BANG, p.parsePrefixExpression)
 	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(token.TRUE, p.parseBoolean)
@@ -278,6 +279,75 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 func (p *Parser) parseStringLiteral() ast.Expression {
 	lit := &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 	return lit
+}
+
+func (p *Parser) parseInterpolatedStringLiteral() ast.Expression {
+	lit := &ast.InterpolatedStringLiteral{Token: p.curToken}
+	lit.Segments = p.parseStringSegments(p.curToken.Literal)
+	return lit
+}
+
+func (p *Parser) parseStringSegments(input string) []ast.Expression {
+	segments := []ast.Expression{}
+	var buffer string
+	inExpression := false
+	exprBuffer := ""
+
+	for i := 0; i < len(input); i++ {
+		char := input[i]
+
+		if char == '\\' && i+1 < len(input) && input[i+1] == '{' {
+			// Handle escaped brace
+			buffer += "{"
+			i++ // Skip the next character
+		} else if char == '{' {
+			if inExpression {
+				// Handle nested braces if necessary
+				exprBuffer += string(char)
+			} else {
+				// Add the current buffer as a string segment
+				if buffer != "" {
+					literal := &ast.StringLiteral{Value: buffer}
+					segments = append(segments, literal)
+					buffer = ""
+				}
+				inExpression = true
+			}
+		} else if char == '}' {
+			if inExpression {
+				// Parse the expression inside the braces
+				expr := p.parseExpressionFromString(exprBuffer)
+				segments = append(segments, expr)
+				exprBuffer = ""
+				inExpression = false
+			} else {
+				buffer += string(char)
+			}
+		} else {
+			if inExpression {
+				exprBuffer += string(char)
+			} else {
+				buffer += string(char)
+			}
+		}
+	}
+
+	// Add any remaining buffer as a string segment
+	if buffer != "" {
+		literal := &ast.StringLiteral{Value: buffer}
+		segments = append(segments, literal)
+	}
+
+	return segments
+}
+
+func (p *Parser) parseExpressionFromString(input string) ast.Expression {
+	// This function should parse the expression from the string input
+	// For simplicity, let's assume it returns an identifier for now
+	l := lexer.New(input)
+	exprParser := New(l)
+	expression := exprParser.parseExpression(LOWEST)
+	return expression
 }
 
 func (p *Parser) parseFloatLitearl() ast.Expression {

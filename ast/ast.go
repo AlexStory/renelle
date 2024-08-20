@@ -172,6 +172,27 @@ func (sl *StringLiteral) String() string       { return sl.Token.Literal }
 func (sl *StringLiteral) Comments() []string   { return sl.comments }
 func (sl *StringLiteral) AddComment(c string)  { sl.comments = append(sl.comments, c) }
 
+type InterpolatedStringLiteral struct {
+	Token    token.Token
+	Segments []Expression
+	comments []string
+}
+
+func (isl *InterpolatedStringLiteral) expressionNode()      {}
+func (isl *InterpolatedStringLiteral) T() token.Token       { return isl.Token }
+func (isl *InterpolatedStringLiteral) TokenLiteral() string { return isl.Token.Literal }
+func (isl *InterpolatedStringLiteral) String() string {
+	var out bytes.Buffer
+	out.WriteString("\"")
+	for _, s := range isl.Segments {
+		out.WriteString(s.String())
+	}
+	out.WriteString("\"")
+	return out.String()
+}
+func (isl *InterpolatedStringLiteral) Comments() []string  { return isl.comments }
+func (isl *InterpolatedStringLiteral) AddComment(c string) { isl.comments = append(isl.comments, c) }
+
 type ArrayLiteral struct {
 	Token    token.Token
 	Elements []Expression
