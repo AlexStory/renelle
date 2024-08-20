@@ -111,6 +111,26 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
 
+	case *ast.InterpolatedStringLiteral:
+		var sb strings.Builder
+		for _, part := range node.Segments {
+			evaluated := Eval(part, env, ctx)
+			if isError(evaluated) {
+				return evaluated
+			}
+			switch evaluated := evaluated.(type) {
+			case *object.String:
+				sb.WriteString(evaluated.Value)
+			case *object.Integer:
+				sb.WriteString(evaluated.Inspect())
+			case *object.Float:
+				sb.WriteString(evaluated.Inspect())
+			default:
+				sb.WriteString(evaluated.Inspect())
+			}
+		}
+		return &object.String{Value: sb.String()}
+
 	case *ast.MapLiteral:
 		return evalMapLiteral(node, env, ctx)
 	case *ast.MapUpdateLiteral:

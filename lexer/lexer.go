@@ -145,6 +145,18 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Column = l.column
 		tok.Type = token.STRING
 		tok.Literal = l.readString()
+	case '$':
+		tok.Line = l.line
+		tok.Column = l.column
+		l.readChar() // skip the $
+		if l.ch == '"' {
+			tok.Type = token.INTERPOLATED
+			tok.Literal = l.readString()
+		} else {
+			tok.Type = token.ILLEGAL
+			tok.Literal = string(l.ch)
+		}
+
 	default:
 		if isLetter(l.ch) {
 			tok.Line = l.line
