@@ -10,4 +10,6 @@ var (
 	NIL   = &object.Atom{Value: "nil"}
 	OK    = &object.Atom{Value: "ok"}
 	ERROR = &object.Atom{Value: "error"}
+	CONT  = &object.Atom{Value: "cont"}
+	HALT  = &object.Atom{Value: "halt"}
 )
