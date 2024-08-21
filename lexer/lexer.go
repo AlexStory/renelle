@@ -38,11 +38,21 @@ func (l *Lexer) NextToken() token.Token {
 	switch l.ch {
 	case '=':
 		if l.getNextChar() == '=' {
-			ch := l.ch
-			col := l.column
-			l.readChar()
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.EQ, Literal: literal, Line: l.line, Column: col}
+			if l.getSecondNextChar() == '=' {
+				ch := l.ch
+				col := l.column
+				l.readChar()
+				ch2 := l.ch
+				l.readChar()
+				literal := string(ch) + string(ch2) + string(l.ch)
+				tok = token.Token{Type: token.ARRAY_EQ, Literal: literal, Line: l.line, Column: col}
+			} else {
+				ch := l.ch
+				col := l.column
+				l.readChar()
+				literal := string(ch) + string(l.ch)
+				tok = token.Token{Type: token.EQ, Literal: literal, Line: l.line, Column: col}
+			}
 		} else if l.getNextChar() == '>' {
 			ch := l.ch
 			col := l.column
@@ -53,7 +63,15 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.ASSIGN, l.ch, l.line, l.column)
 		}
 	case '+':
-		tok = newToken(token.PLUS, l.ch, l.line, l.column)
+		if l.getNextChar() == '+' {
+			ch := l.ch
+			col := l.column
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{Type: token.CONCAT, Literal: literal, Line: l.line, Column: col}
+		} else {
+			tok = newToken(token.PLUS, l.ch, l.line, l.column)
+		}
 	case '-':
 		tok = newToken(token.MINUS, l.ch, l.line, l.column)
 	case '/':
@@ -108,11 +126,21 @@ func (l *Lexer) NextToken() token.Token {
 		}
 	case '!':
 		if l.getNextChar() == '=' {
-			ch := l.ch
-			col := l.column
-			l.readChar()
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.NEQ, Literal: literal, Line: l.line, Column: col}
+			if l.getSecondNextChar() == '=' {
+				ch := l.ch
+				col := l.column
+				l.readChar()
+				ch2 := l.ch
+				l.readChar()
+				literal := string(ch) + string(ch2) + string(l.ch)
+				tok = token.Token{Type: token.ARRAY_NEQ, Literal: literal, Line: l.line, Column: col}
+			} else {
+				ch := l.ch
+				col := l.column
+				l.readChar()
+				literal := string(ch) + string(l.ch)
+				tok = token.Token{Type: token.NEQ, Literal: literal, Line: l.line, Column: col}
+			}
 		} else {
 			tok = newToken(token.BANG, l.ch, l.line, l.column)
 		}
@@ -127,11 +155,19 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.ILLEGAL, l.ch, l.line, l.column)
 		}
 	case ':':
-		tok.Line = l.line
-		tok.Column = l.column
-		tok.Literal = l.readAtom()
-		tok.Type = token.ATOM
-		return tok
+		if l.getNextChar() == ':' {
+			ch := l.ch
+			col := l.column
+			l.readChar()
+			literal := string(ch) + string(l.ch)
+			tok = token.Token{Type: token.DOTDOT, Literal: literal, Line: l.line, Column: col}
+		} else {
+			tok.Line = l.line
+			tok.Column = l.column
+			tok.Literal = l.readAtom()
+			tok.Type = token.ATOM
+			return tok
+		}
 	case '.':
 		tok = newToken(token.DOT, l.ch, l.line, l.column)
 	case 0:
@@ -166,8 +202,12 @@ func (l *Lexer) NextToken() token.Token {
 			case '(':
 				tok.Type = token.FUNCCALL
 			case ':':
-				tok.Type = token.ATOM
-				l.readChar()
+				if l.getNextChar() == ':' {
+					tok.Type = token.LookupIdent(tok.Literal)
+				} else {
+					tok.Type = token.ATOM
+					l.readChar()
+				}
 			default:
 				tok.Type = token.LookupIdent(tok.Literal)
 			}
@@ -283,6 +323,13 @@ func (l *Lexer) getPrevChar() byte {
 func (l *Lexer) getNextChar() byte {
 	if l.position+1 < len(l.input) {
 		return l.input[l.position+1]
+	}
+	return 0
+}
+
+func (l *Lexer) getSecondNextChar() byte {
+	if l.position+2 < len(l.input) {
+		return l.input[l.position+2]
 	}
 	return 0
 }

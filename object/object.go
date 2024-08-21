@@ -28,6 +28,7 @@ const (
 	ARRAY_OBJ        = "ARRAY"
 	TUPLE_OBJ        = "TUPLE"
 	MAP_OBJ          = "MAP"
+	SLICE_OBJ        = "SLICE"
 )
 
 type Object interface {
@@ -295,6 +296,16 @@ func (to *Tuple) HashKey() HashKey {
 		hasher.Write([]byte(strconv.FormatUint(itemHashKey.Value, 10)))
 	}
 	return HashKey{Type: to.Type(), Value: hasher.Sum64()}
+}
+
+type Slice struct {
+	Start Object
+	End   Object
+}
+
+func (s *Slice) Type() ObjectType { return "SLICE" }
+func (s *Slice) Inspect() string {
+	return fmt.Sprintf("%s::%s", s.Start.Inspect(), s.End.Inspect())
 }
 
 type Map struct {
