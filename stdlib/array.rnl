@@ -28,6 +28,11 @@ fn any?(array, predicate) {
     }
 }
 
+# returns the average of all elements in the array
+fn average(array) {
+    sum(array) / len(array)
+}
+
 # returns the all the elements of two arrays combined in a new array
 fn concat(array1 array2) {
     Array.reduce(array2, array1, \acc x => push(acc, x))
@@ -87,6 +92,15 @@ fn find_index(array f) {
 
 }
 
+# returns a frequency table of all items in the array
+fn frequency(array) {
+    Array.reduce(array, {}, \acc x => {
+        let count = acc @ x
+        let new_count = if count == :nil { 1 } else { count + 1 }
+        { acc with x = new_count }
+    })
+}
+
 
 # Returns the first element of the array.
 let _head = head
@@ -116,6 +130,50 @@ fn length(array) {
 # Applies a function to each element of the array and returns the resulting array.
 fn map(array, f) {
     Array.reduce(array, [], \acc x => push(acc, f(x)))
+}
+
+# returns the largest element in the array
+fn max(array) {
+    Array.reduce(array, \acc x => {
+        if x > acc {
+            x
+        } else {
+            acc
+        }
+    })
+}
+
+# returns the largest element in the array, by applying the given function to each element
+fn max_by(array, f) {
+    Array.reduce(array, \acc x => {
+        if f(x) > f(acc) {
+            x
+        } else {
+            acc
+        }
+    })
+}
+
+# returns the smallest element in the array
+fn min(array) {
+    Array.reduce(array, \acc x => {
+        if x < acc {
+            x
+        } else {
+            acc
+        }
+    })
+}
+
+# returns the smallest element in the array, by applying the given function to each element
+fn min_by(array, f) {
+    Array.reduce(array, \acc x => {
+        if f(x) < f(acc) {
+            x
+        } else {
+            acc
+        }
+    })
 }
 
 # recursively sorts the array
