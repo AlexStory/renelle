@@ -978,7 +978,7 @@ func loadModule(moduleName string, env *object.Environment) object.Object {
 	moduleParts := strings.Split(moduleName, ".")
 	// Convert each part of the module name to lowercase
 	for i, part := range moduleParts {
-		moduleParts[i] = strings.ToLower(part)
+		moduleParts[i] = toSnakeCase(part)
 	}
 	// Join the parts with the OS-specific path separator and append the file extension
 	localModulePath := filepath.Join(append([]string{"src"}, moduleParts[1:]...)...) + ".rnl"
@@ -997,6 +997,21 @@ func loadModule(moduleName string, env *object.Environment) object.Object {
 	}
 
 	return newError(0, 0, "module not found: %s", moduleName)
+}
+
+func toSnakeCase(s string) string {
+	var result []rune
+	for i, r := range s {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				result = append(result, '_')
+			}
+			result = append(result, unicode.ToLower(r))
+		} else {
+			result = append(result, r)
+		}
+	}
+	return string(result)
 }
 
 func loadModuleFromFile(modulePath string, env *object.Environment, moduleName string) object.Object {
