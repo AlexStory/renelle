@@ -165,6 +165,8 @@ var builtins = map[string]*object.Builtin{
 				return &object.Integer{Value: int64(len(arg.Value))}
 			case *object.Array:
 				return &object.Integer{Value: int64(len(arg.Elements))}
+			case *object.Tuple:
+				return &object.Integer{Value: int64(len(arg.Elements))}
 			default:
 				return newError(ctx.Line, ctx.Column, "argument to `len` not supported, got %s", args[0].Type())
 			}
