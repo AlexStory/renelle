@@ -1,3 +1,9 @@
 module String
 
 
+# splits a string on line breaks
+fn lines(string) {
+    String.split(string, "\n")
+}
+
+

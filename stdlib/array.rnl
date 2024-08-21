@@ -30,7 +30,7 @@ fn any?(array, predicate) {
 
 # returns the average of all elements in the array
 fn average(array) {
-    sum(array) / len(array)
+    sum(array) / (len(array) * 1.0)
 }
 
 # returns the all the elements of two arrays combined in a new array
