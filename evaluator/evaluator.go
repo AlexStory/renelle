@@ -174,6 +174,10 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		return evalPrefixExpression(node.Operator, right, node.Token.Line, node.Token.Column)
 
 	case *ast.InfixExpression:
+		if node.Operator == "::" {
+			return evalSliceExpression(node.Left, node.Right, env, ctx)
+		}
+
 		if node.Operator == "|>" {
 			switch right := node.Right.(type) {
 			case *ast.CallExpression:
@@ -218,7 +222,9 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		if isError(right) {
 			return right
 		}
-		return evalInfixExpression(ctx, node.Operator, left, right, node.Token.Line, node.Token.Column)
+		ctx.Line = node.Token.Line
+		ctx.Column = node.Token.Column
+		return evalInfixExpression(ctx, node.Operator, left, right)
 
 	case *ast.CaseExpression:
 		testVal := Eval(node.Test, env, ctx)
@@ -284,7 +290,10 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 			return index
 		}
 
-		return evalIndexExpression(left, index, node.Token.Line, node.Token.Column)
+		ctx.Line = node.Token.Line
+		ctx.Column = node.Token.Column
+
+		return evalIndexExpression(ctx, left, index)
 
 	case *ast.CallExpression:
 		function := Eval(node.Function, env, ctx)
@@ -636,22 +645,55 @@ func evalBlockStatements(stmts []ast.Statement, env *object.Environment, ctx *ob
 
 }
 
-func evalIndexExpression(left, index object.Object, line, col int) object.Object {
+func evalSliceExpression(left, right ast.Expression, env *object.Environment, ctx *object.EvalContext) object.Object {
+	var start, stop object.Object
+	leftIdent, ok := left.(*ast.Identifier)
+	if ok && leftIdent.Value == "_" {
+		start = &object.Integer{Value: 0}
+	} else {
+		start = Eval(left, env, ctx)
+		if isError(start) {
+			return start
+		}
+	}
+
+	rightIdent, ok := right.(*ast.Identifier)
+	if ok && rightIdent.Value == "_" {
+		stop = &object.Integer{Value: math.MaxInt64}
+	} else {
+		stop = Eval(right, env, ctx)
+		if isError(stop) {
+			return stop
+		}
+	}
+
+	if start.Type() != object.INTEGER_OBJ || stop.Type() != object.INTEGER_OBJ {
+		return newError(ctx.Line, ctx.Column, "slice bounds must be integers")
+	}
+	return &object.Slice{Start: start, End: stop}
+}
+
+func evalIndexExpression(ctx *object.EvalContext, left, index object.Object) object.Object {
 	switch {
 	case left.Type() == object.ARRAY_OBJ && index.Type() == object.INTEGER_OBJ:
-		return evalArrayIndexExpression(left, index, line, col)
+		return evalArrayIndexExpression(ctx, left, index)
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.SLICE_OBJ:
+		return evalArraySliceExpression(ctx, left, index)
+	case left.Type() == object.ARRAY_OBJ && index.Type() == object.ARRAY_OBJ:
+		return evalArrayMaskExpression(ctx, left, index)
 	case left.Type() == object.STRING_OBJ && index.Type() == object.INTEGER_OBJ:
-		return evalStringIndexExpression(left, index, line, col)
+		return evalStringIndexExpression(ctx, left, index)
 	case left.Type() == object.TUPLE_OBJ && index.Type() == object.INTEGER_OBJ:
-		return evalTupleIndexExpression(left, index, line, col)
+		return evalTupleIndexExpression(ctx, left, index)
 	case left.Type() == object.MAP_OBJ:
-		return evalMapIndexExpression(left, index, line, col)
+		return evalMapIndexExpression(ctx, left, index)
 	default:
-		return newError(line, col, "index operator not supported: %s", left.Type())
+		fmt.Print(index.Type())
+		return newError(ctx.Line, ctx.Column, "index operator not supported: %s", left.Type())
 	}
 }
 
-func evalArrayIndexExpression(array, index object.Object, line, col int) object.Object {
+func evalArrayIndexExpression(ctx *object.EvalContext, array, index object.Object) object.Object {
 	arrayObject := array.(*object.Array)
 	idx := index.(*object.Integer).Value
 	max := int64(len(arrayObject.Elements) - 1)
@@ -663,7 +705,110 @@ func evalArrayIndexExpression(array, index object.Object, line, col int) object.
 	return arrayObject.Elements[idx]
 }
 
-func evalMapIndexExpression(mapObject, index object.Object, line, col int) object.Object {
+func evalArraySliceExpression(ctx *object.EvalContext, array, slice object.Object) object.Object {
+	arrayObject := array.(*object.Array)
+	sliceObject := slice.(*object.Slice)
+
+	start := sliceObject.Start.(*object.Integer).Value
+	stop := sliceObject.End.(*object.Integer).Value
+
+	if start < 0 {
+		start = 0
+	}
+	if stop > int64(len(arrayObject.Elements)) {
+		stop = int64(len(arrayObject.Elements))
+	}
+
+	if start > stop {
+		return &object.Array{Elements: []object.Object{}}
+	}
+
+	return &object.Array{Elements: arrayObject.Elements[start:stop]}
+}
+
+func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object) object.Object {
+	arrayObject := array.(*object.Array)
+	maskObject := mask.(*object.Array)
+
+	if len(maskObject.Elements) == 0 {
+		return newError(ctx.Line, ctx.Column, "mask array is empty")
+	}
+
+	// Check the type of the first element in the mask array
+	switch maskObject.Elements[0].(type) {
+	case *object.Boolean:
+		// Handle boolean mask
+		if len(arrayObject.Elements) != len(maskObject.Elements) {
+			return newError(ctx.Line, ctx.Column, "array length mismatch: %d != %d", len(arrayObject.Elements), len(maskObject.Elements))
+		}
+
+		elements := []object.Object{}
+		for i := range arrayObject.Elements {
+			if maskObject.Elements[i] == constants.TRUE {
+				elements = append(elements, arrayObject.Elements[i])
+			}
+		}
+		return &object.Array{Elements: elements}
+
+	case *object.Integer:
+		// Handle index array
+		elements := []object.Object{}
+		for _, idxObj := range maskObject.Elements {
+			idx := idxObj.(*object.Integer).Value
+			if idx < 0 || idx >= int64(len(arrayObject.Elements)) {
+				return newError(ctx.Line, ctx.Column, "index out of bounds: %d", idx)
+			}
+			elements = append(elements, arrayObject.Elements[idx])
+		}
+		return &object.Array{Elements: elements}
+	case *object.Array:
+		elements := []object.Object{}
+		if len(maskObject.Elements) == 0 {
+			return newError(ctx.Line, ctx.Column, "mask cannot be empty")
+		}
+		headMask := maskObject.Elements[0]
+		tailMask := &object.Array{Elements: maskObject.Elements[1:]}
+		rows := evalIndexExpression(ctx, arrayObject, headMask)
+
+		if len(tailMask.Elements) == 0 {
+			return rows
+		}
+
+		rowArray, ok := rows.(*object.Array)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", rows.Type())
+		}
+		for _, r := range rowArray.Elements {
+			newRow := evalIndexExpression(ctx, r, tailMask)
+			elements = append(elements, newRow)
+		}
+		return &object.Array{Elements: elements}
+	case *object.Slice:
+		slice := maskObject.Elements[0].(*object.Slice)
+		rows := evalIndexExpression(ctx, arrayObject, slice)
+
+		if len(maskObject.Elements) == 1 {
+			return rows
+		}
+
+		rowArray, ok := rows.(*object.Array)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", rows.Type())
+		}
+
+		elements := []object.Object{}
+		for _, r := range rowArray.Elements {
+			newRow := evalIndexExpression(ctx, r, maskObject.Elements[1])
+			elements = append(elements, newRow)
+		}
+		return &object.Array{Elements: elements}
+
+	default:
+		return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", maskObject.Elements[0].Type())
+	}
+}
+
+func evalMapIndexExpression(ctx *object.EvalContext, mapObject, index object.Object) object.Object {
 	mapObj := mapObject.(*object.Map)
 	value, ok := mapObj.Get(index)
 	if !ok {
@@ -672,7 +817,7 @@ func evalMapIndexExpression(mapObject, index object.Object, line, col int) objec
 	return value
 }
 
-func evalTupleIndexExpression(tuple, index object.Object, line, col int) object.Object {
+func evalTupleIndexExpression(ctx *object.EvalContext, tuple, index object.Object) object.Object {
 	tupleObject := tuple.(*object.Tuple)
 	idx := index.(*object.Integer).Value
 	max := int64(len(tupleObject.Elements) - 1)
@@ -684,7 +829,7 @@ func evalTupleIndexExpression(tuple, index object.Object, line, col int) object.
 	return tupleObject.Elements[idx]
 }
 
-func evalStringIndexExpression(str, index object.Object, line, col int) object.Object {
+func evalStringIndexExpression(ctx *object.EvalContext, str, index object.Object) object.Object {
 	strObject := str.(*object.String)
 	idx := index.(*object.Integer).Value
 	max := int64(len(strObject.Value) - 1)
@@ -708,6 +853,9 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 			return module
 		}
 	} else {
+		if node.Value == "_" {
+			return constants.NIL
+		}
 		if val, ok := env.Get(node.Value); ok {
 			return val
 		}
@@ -730,14 +878,14 @@ func evalPrefixExpression(operator string, right object.Object, line, col int) o
 	}
 }
 
-func evalInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object, line, col int) object.Object {
+func evalInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object) object.Object {
 	switch {
 	case operator == "and":
 		return nativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
 	case operator == "or":
 		return nativeBoolToBooleanObject(isTruthy(left) || isTruthy(right))
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
-		return evalIntegerInfixExpression(operator, left, right, line, col)
+		return evalIntegerInfixExpression(ctx, operator, left, right)
 	case left.Type() == object.FLOAT_OBJ && right.Type() == object.FLOAT_OBJ:
 		return evalFloatInfixExpression(operator, left, right)
 	case left.Type() == object.FLOAT_OBJ && right.Type() == object.INTEGER_OBJ:
@@ -745,7 +893,7 @@ func evalInfixExpression(ctx *object.EvalContext, operator string, left, right o
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.FLOAT_OBJ:
 		return evalFloatInfixExpression(operator, &object.Float{Value: float64(left.(*object.Integer).Value)}, right)
 	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
-		return evalStringInfixExpression(operator, left, right, line, col)
+		return evalStringInfixExpression(ctx, operator, left, right)
 	case left.Type() == object.ARRAY_OBJ && right.Type() == object.ARRAY_OBJ:
 		return evalArrayInfixExpression(ctx, operator, left, right)
 	case left.Type() == object.ARRAY_OBJ && right.Type() == object.INTEGER_OBJ,
@@ -756,13 +904,13 @@ func evalInfixExpression(ctx *object.EvalContext, operator string, left, right o
 	case operator == "!=":
 		return nativeBoolToBooleanObject(left != right)
 	case left.Type() != right.Type():
-		return newError(line, col, "type mismatch: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx.Line, ctx.Column, "type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	default:
-		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
-func evalIntegerInfixExpression(operator string, left, right object.Object, line, col int) object.Object {
+func evalIntegerInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object) object.Object {
 	leftVal := left.(*object.Integer).Value
 	rightVal := right.(*object.Integer).Value
 
@@ -792,7 +940,7 @@ func evalIntegerInfixExpression(operator string, left, right object.Object, line
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -830,7 +978,7 @@ func evalFloatInfixExpression(operator string, left, right object.Object) object
 	}
 }
 
-func evalStringInfixExpression(operator string, left, right object.Object, line, col int) object.Object {
+func evalStringInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object) object.Object {
 	leftVal := left.(*object.String).Value
 	rightVal := right.(*object.String).Value
 
@@ -850,7 +998,7 @@ func evalStringInfixExpression(operator string, left, right object.Object, line,
 	case ">=":
 		return nativeBoolToBooleanObject(leftVal >= rightVal)
 	default:
-		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 
 }
@@ -859,11 +1007,20 @@ func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, ri
 	leftVal := left.(*object.Array)
 	rightVal := right.(*object.Array)
 	switch operator {
-	case "+":
-		return VectorVectorAdd(ctx, leftVal, rightVal)
+	case "+", "-", "*", "/", "%", "**", "<", ">", ">=", "<=", "==", "!=":
+		if len(leftVal.Elements) != len(rightVal.Elements) {
+			return newError(ctx.Line, ctx.Column, "vector length mismatch: %d != %d", len(leftVal.Elements), len(rightVal.Elements))
+		}
+
+		elements := make([]object.Object, len(leftVal.Elements))
+		for i := range leftVal.Elements {
+			elements[i] = evalInfixExpression(ctx, operator, leftVal.Elements[i], rightVal.Elements[i])
+		}
+
+		return &object.Array{Elements: elements}
 	case "++":
 		return &object.Array{Elements: append(leftVal.Elements, rightVal.Elements...)}
-	case "==":
+	case "===":
 		if len(leftVal.Elements) != len(rightVal.Elements) {
 			return constants.FALSE
 		}
@@ -873,7 +1030,7 @@ func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, ri
 			}
 		}
 		return constants.TRUE
-	case "!=":
+	case "!==":
 		if len(leftVal.Elements) != len(rightVal.Elements) {
 			return constants.TRUE
 		}
@@ -890,15 +1047,15 @@ func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, ri
 
 func evalArrayMathExpression(ctx *object.EvalContext, operator string, left object.Object, right object.Object) object.Object {
 	leftVal := left.(*object.Array)
+
 	switch operator {
-	// case "*":
-	// return VectorScalarMul(ctx, leftVal, rightVal)
-	// case "/":
-	// return VectorScalarDiv(ctx, leftVal, rightVal)
-	case "+":
-		return VectorScalarAdd(ctx, leftVal, right)
-	// case "-":
-	// return VectorScalarSub(ctx, leftVal, rightVal)
+	case "+", "-", "*", "/", ">", ">=", "==", "<=", "<", "%":
+		elements := make([]object.Object, len(leftVal.Elements))
+		for i := range leftVal.Elements {
+			elements[i] = evalInfixExpression(ctx, operator, leftVal.Elements[i], right)
+		}
+
+		return &object.Array{Elements: elements}
 	default:
 		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}

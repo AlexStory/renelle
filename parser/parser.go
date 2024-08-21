@@ -29,26 +29,29 @@ const (
 )
 
 var precedences = map[token.TokenType]int{
-	token.EQ:       EQUALS,
-	token.NEQ:      EQUALS,
-	token.LT:       LESSGREATER,
-	token.GT:       LESSGREATER,
-	token.LTE:      LESSGREATER,
-	token.GTE:      LESSGREATER,
-	token.PLUS:     SUM,
-	token.MINUS:    SUM,
-	token.CONCAT:   SUM,
-	token.SLASH:    PRODUCT,
-	token.ASTERISK: PRODUCT,
-	token.MOD:      PRODUCT,
-	token.POW:      EXPONENT,
-	token.PIPE:     CALL,
-	token.LPAREN:   CALL,
-	token.FUNCCALL: CALL,
-	token.OR:       OR,
-	token.AND:      AND,
-	token.AT:       INDEX,
-	token.DOT:      ACCESS,
+	token.EQ:        EQUALS,
+	token.NEQ:       EQUALS,
+	token.ARRAY_EQ:  EQUALS,
+	token.ARRAY_NEQ: EQUALS,
+	token.LT:        LESSGREATER,
+	token.GT:        LESSGREATER,
+	token.LTE:       LESSGREATER,
+	token.GTE:       LESSGREATER,
+	token.PLUS:      SUM,
+	token.MINUS:     SUM,
+	token.CONCAT:    SUM,
+	token.SLASH:     PRODUCT,
+	token.ASTERISK:  PRODUCT,
+	token.MOD:       PRODUCT,
+	token.POW:       EXPONENT,
+	token.PIPE:      CALL,
+	token.LPAREN:    CALL,
+	token.FUNCCALL:  CALL,
+	token.OR:        OR,
+	token.AND:       AND,
+	token.AT:        INDEX,
+	token.DOTDOT:    INDEX,
+	token.DOT:       ACCESS,
 }
 
 type (
@@ -100,6 +103,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfix(token.EQ, p.parseInfixExpression)
 	p.registerInfix(token.NEQ, p.parseInfixExpression)
+	p.registerInfix(token.ARRAY_EQ, p.parseInfixExpression)
+	p.registerInfix(token.ARRAY_NEQ, p.parseInfixExpression)
 	p.registerInfix(token.LT, p.parseInfixExpression)
 	p.registerInfix(token.GT, p.parseInfixExpression)
 	p.registerInfix(token.LTE, p.parseInfixExpression)
@@ -116,6 +121,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.OR, p.parseInfixExpression)
 	p.registerInfix(token.AT, p.parseIndexExpression)
 	p.registerInfix(token.DOT, p.parsePropertyAccessExpression)
+	p.registerInfix(token.DOTDOT, p.parseInfixExpression)
 
 	p.nextToken()
 	p.nextToken()

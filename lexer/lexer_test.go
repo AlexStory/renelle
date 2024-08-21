@@ -42,6 +42,8 @@ cond {
 }
 with
 $"hello {name}"
+=== !==
+1::2
 `
 
 	tests := []struct {
@@ -146,7 +148,12 @@ $"hello {name}"
 		{token.RBRACE, "}", 31, 1},
 		{token.WITH, "with", 32, 1},
 		{token.INTERPOLATED, "hello {name}", 33, 1},
-		{token.EOF, "", 34, 1},
+		{token.ARRAY_EQ, "===", 34, 1},
+		{token.ARRAY_NEQ, "!==", 34, 5},
+		{token.INT, "1", 35, 1},
+		{token.DOTDOT, "::", 35, 2},
+		{token.INT, "2", 35, 4},
+		{token.EOF, "", 36, 1},
 	}
 
 	l := New(input)
