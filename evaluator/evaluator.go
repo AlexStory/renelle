@@ -218,7 +218,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		if isError(right) {
 			return right
 		}
-		return evalInfixExpression(node.Operator, left, right, node.Token.Line, node.Token.Column)
+		return evalInfixExpression(ctx, node.Operator, left, right, node.Token.Line, node.Token.Column)
 
 	case *ast.CaseExpression:
 		testVal := Eval(node.Test, env, ctx)
@@ -730,7 +730,7 @@ func evalPrefixExpression(operator string, right object.Object, line, col int) o
 	}
 }
 
-func evalInfixExpression(operator string, left, right object.Object, line, col int) object.Object {
+func evalInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object, line, col int) object.Object {
 	switch {
 	case operator == "and":
 		return nativeBoolToBooleanObject(isTruthy(left) && isTruthy(right))
@@ -747,7 +747,10 @@ func evalInfixExpression(operator string, left, right object.Object, line, col i
 	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
 		return evalStringInfixExpression(operator, left, right, line, col)
 	case left.Type() == object.ARRAY_OBJ && right.Type() == object.ARRAY_OBJ:
-		return evalArrayInfixExpression(operator, left, right, line, col)
+		return evalArrayInfixExpression(ctx, operator, left, right)
+	case left.Type() == object.ARRAY_OBJ && right.Type() == object.INTEGER_OBJ,
+		left.Type() == object.ARRAY_OBJ && right.Type() == object.FLOAT_OBJ:
+		return evalArrayMathExpression(ctx, operator, left, right)
 	case operator == "==":
 		return nativeBoolToBooleanObject(left == right)
 	case operator == "!=":
@@ -852,11 +855,13 @@ func evalStringInfixExpression(operator string, left, right object.Object, line,
 
 }
 
-func evalArrayInfixExpression(operator string, left, right object.Object, line, col int) object.Object {
+func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, right object.Object) object.Object {
 	leftVal := left.(*object.Array)
 	rightVal := right.(*object.Array)
 	switch operator {
 	case "+":
+		return VectorVectorAdd(ctx, leftVal, rightVal)
+	case "++":
 		return &object.Array{Elements: append(leftVal.Elements, rightVal.Elements...)}
 	case "==":
 		if len(leftVal.Elements) != len(rightVal.Elements) {
@@ -879,7 +884,23 @@ func evalArrayInfixExpression(operator string, left, right object.Object, line, 
 		}
 		return constants.FALSE
 	default:
-		return newError(line, col, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+func evalArrayMathExpression(ctx *object.EvalContext, operator string, left object.Object, right object.Object) object.Object {
+	leftVal := left.(*object.Array)
+	switch operator {
+	// case "*":
+	// return VectorScalarMul(ctx, leftVal, rightVal)
+	// case "/":
+	// return VectorScalarDiv(ctx, leftVal, rightVal)
+	case "+":
+		return VectorScalarAdd(ctx, leftVal, right)
+	// case "-":
+	// return VectorScalarSub(ctx, leftVal, rightVal)
+	default:
+		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 

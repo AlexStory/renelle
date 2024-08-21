@@ -50,6 +50,7 @@ const (
 	POW          = "**"
 	PIPE         = "|>"
 	DOT          = "."
+	CONCAT       = "++"
 
 	LPAREN   = "("
 	RPAREN   = ")"
