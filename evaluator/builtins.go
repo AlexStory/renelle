@@ -88,7 +88,7 @@ func iter(ctx *object.EvalContext, args ...object.Object) object.Object {
 	case *object.Builtin:
 		fn = arg
 	default:
-		return newError(ctx.Line, ctx.Column, "second argument to `iter` must be FUNCTION or BUILTIN, got %s", args[1].Type())
+		return newError(ctx.Line, ctx.Column, "second argument to `iter` must be FUNCTION, got %s", args[1].Type())
 	}
 
 	for i := 0; i < len(list.Elements); i++ {
@@ -148,6 +148,48 @@ func reduce(ctx *object.EvalContext, args ...object.Object) object.Object {
 			return result
 		}
 		accumulator = result
+	}
+
+	return accumulator
+}
+
+func loop(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 {
+		return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want =1", len(args))
+	}
+
+	fnObj, ok := args[1].(*object.Function)
+	if !ok {
+		return newError(ctx.Line, ctx.Column, "second argument to loop must be a function, got %s", args[1].Type())
+	}
+
+	accumulator := args[0]
+
+	for {
+		result := applyFunction(fnObj, []object.Object{accumulator}, ctx)
+
+		if result.Type() == object.ERROR_OBJ {
+			return result
+		}
+
+		tuple, ok := result.(*object.Tuple)
+
+		if !ok || len(tuple.Elements) != 2 {
+			return newError(ctx.Line, ctx.Column, "function must return a tuple of (:cont, acc) or (:halt, acc)")
+		}
+
+		action := tuple.Elements[0].(*object.Atom)
+		if !ok {
+			return newError(ctx.Line, ctx.Column, "first element of tuple must be an atom, got %s", tuple.Elements[0].Type())
+		}
+
+		accumulator = tuple.Elements[1]
+
+		if action.Value == "halt" {
+			break
+		} else if action.Value != "cont" {
+			return newError(ctx.Line, ctx.Column, "first element of tuple must be :cont or :halt, got %s", action.Value)
+		}
 	}
 
 	return accumulator

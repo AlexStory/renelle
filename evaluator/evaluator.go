@@ -862,6 +862,9 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 		if val, ok := builtins[node.Value]; ok {
 			return val
 		}
+		if node.Value == "loop" {
+			return &object.Builtin{Fn: loop}
+		}
 	}
 	return newError(node.Token.Line, node.Token.Column, "identifier not found: "+node.Value)
 }
@@ -1179,16 +1182,51 @@ func loadModule(moduleName string, env *object.Environment) object.Object {
 
 func toSnakeCase(s string) string {
 	var result []rune
+	var buffer []rune
+
 	for i, r := range s {
 		if unicode.IsUpper(r) {
-			if i > 0 {
-				result = append(result, '_')
-			}
-			result = append(result, unicode.ToLower(r))
+			buffer = append(buffer, r)
 		} else {
+			if len(buffer) > 0 {
+				if len(buffer) > 1 {
+					// Handle acronym
+					if i > len(buffer) {
+						result = append(result, '_')
+					}
+					for _, br := range buffer {
+						result = append(result, unicode.ToLower(br))
+					}
+				} else {
+					// Handle single uppercase letter
+					if i > 1 {
+						result = append(result, '_')
+					}
+					result = append(result, unicode.ToLower(buffer[0]))
+				}
+				buffer = buffer[:0]
+			}
 			result = append(result, r)
 		}
 	}
+
+	// Process any remaining buffer
+	if len(buffer) > 0 {
+		if len(buffer) > 1 {
+			if len(result) > 0 {
+				result = append(result, '_')
+			}
+			for _, br := range buffer {
+				result = append(result, unicode.ToLower(br))
+			}
+		} else {
+			if len(result) > 0 {
+				result = append(result, '_')
+			}
+			result = append(result, unicode.ToLower(buffer[0]))
+		}
+	}
+
 	return string(result)
 }
 

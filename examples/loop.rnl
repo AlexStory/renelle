@@ -1,0 +1,10 @@
+fn main() {
+    let n = loop(1_000_000, \n => {
+        if n > 0 {
+            (:cont, n-1)
+        } else {
+            (:halt, n)
+        }
+    })
+    print(n)
+}
