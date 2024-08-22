@@ -355,6 +355,9 @@ func (m *Map) HashKey() HashKey {
 }
 
 func (m *Map) Get(key Object) (Object, bool) {
+	if len(m.Store.Buckets) == 0 {
+		return nil, false
+	}
 	hashKey := key.(Hashable).HashKey()
 	index := int(hashKey.Value % uint64(len(m.Store.Buckets)))
 	if m.Store.Buckets[index] == nil {
@@ -367,6 +370,7 @@ func (m *Map) Get(key Object) (Object, bool) {
 	}
 	return nil, false
 }
+
 func (m *Map) Put(key, value Object) {
 	m.Store.Put(Pair{Key: key, Value: value})
 }
