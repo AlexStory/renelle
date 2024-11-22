@@ -7,7 +7,7 @@ import (
 
 func MathAbs(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "abs() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "abs() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -22,13 +22,13 @@ func MathAbs(ctx *object.EvalContext, args ...object.Object) object.Object {
 		}
 		return num
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "abs() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "abs() requires a number"}
 	}
 }
 
 func MathCeil(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "ceil() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "ceil() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -40,13 +40,13 @@ func MathCeil(ctx *object.EvalContext, args ...object.Object) object.Object {
 		}
 		return &object.Integer{Value: int64(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "ceil() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "ceil() requires a number"}
 	}
 }
 
 func MathCos(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "cos() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "cos() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -55,13 +55,13 @@ func MathCos(ctx *object.EvalContext, args ...object.Object) object.Object {
 	case *object.Float:
 		return &object.Float{Value: math.Cos(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "cos() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "cos() requires a number"}
 	}
 }
 
 func MathFloor(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "floor() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "floor() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -70,13 +70,13 @@ func MathFloor(ctx *object.EvalContext, args ...object.Object) object.Object {
 	case *object.Float:
 		return &object.Integer{Value: int64(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "floor() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "floor() requires a number"}
 	}
 }
 
 func MathMax(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 2 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "max() requires exactly 2 arguments"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "max() requires exactly 2 arguments"}
 	}
 
 	switch num1 := args[0].(type) {
@@ -93,7 +93,7 @@ func MathMax(ctx *object.EvalContext, args ...object.Object) object.Object {
 			}
 			return num2
 		default:
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
 		}
 	case *object.Float:
 		switch num2 := args[1].(type) {
@@ -108,16 +108,16 @@ func MathMax(ctx *object.EvalContext, args ...object.Object) object.Object {
 			}
 			return num2
 		default:
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
 		}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "max() requires numbers"}
 	}
 }
 
 func MathMin(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 2 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "min() requires exactly 2 arguments"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "min() requires exactly 2 arguments"}
 	}
 
 	switch num1 := args[0].(type) {
@@ -134,7 +134,7 @@ func MathMin(ctx *object.EvalContext, args ...object.Object) object.Object {
 			}
 			return num2
 		default:
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
 		}
 	case *object.Float:
 		switch num2 := args[1].(type) {
@@ -149,10 +149,10 @@ func MathMin(ctx *object.EvalContext, args ...object.Object) object.Object {
 			}
 			return num2
 		default:
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
 		}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "min() requires numbers"}
 	}
 }
 
@@ -162,7 +162,7 @@ func MathPi(ctx *object.EvalContext, args ...object.Object) object.Object {
 
 func MathRound(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) < 1 || len(args) > 2 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "round() takes 1 or 2 arguments"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "round() takes 1 or 2 arguments"}
 	}
 
 	precision := 0
@@ -170,7 +170,7 @@ func MathRound(ctx *object.EvalContext, args ...object.Object) object.Object {
 		if prec, ok := args[1].(*object.Integer); ok {
 			precision = int(prec.Value)
 		} else {
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "precision must be an integer"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "precision must be an integer"}
 		}
 	}
 
@@ -185,13 +185,13 @@ func MathRound(ctx *object.EvalContext, args ...object.Object) object.Object {
 		}
 		return &object.Float{Value: roundedValue}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "round() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "round() requires a number"}
 	}
 }
 
 func MathSin(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sin() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sin() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -200,34 +200,34 @@ func MathSin(ctx *object.EvalContext, args ...object.Object) object.Object {
 	case *object.Float:
 		return &object.Float{Value: math.Sin(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sin() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sin() requires a number"}
 	}
 }
 
 func MathSqrt(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sqrt() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sqrt() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
 	case *object.Integer:
 		if num.Value < 0 {
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a non-negative number"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a non-negative number"}
 		}
 		return &object.Float{Value: math.Sqrt(float64(num.Value))}
 	case *object.Float:
 		if num.Value < 0 {
-			return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a non-negative number"}
+			return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a non-negative number"}
 		}
 		return &object.Float{Value: math.Sqrt(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "sqrt() requires a number"}
 	}
 }
 
 func MathTan(ctx *object.EvalContext, args ...object.Object) object.Object {
 	if len(args) != 1 {
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "tan() takes exactly 1 argument"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "tan() takes exactly 1 argument"}
 	}
 
 	switch num := args[0].(type) {
@@ -236,6 +236,6 @@ func MathTan(ctx *object.EvalContext, args ...object.Object) object.Object {
 	case *object.Float:
 		return &object.Float{Value: math.Tan(num.Value)}
 	default:
-		return &object.Error{Line: ctx.Line, Column: ctx.Column, Message: "tan() requires a number"}
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "tan() requires a number"}
 	}
 }

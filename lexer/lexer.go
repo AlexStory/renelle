@@ -9,6 +9,7 @@ import (
 )
 
 type Lexer struct {
+	name         string
 	input        string
 	position     int  // current position in input (points to current char)
 	readPosition int  // current reading position in input (after current char)
@@ -17,8 +18,8 @@ type Lexer struct {
 	column       int
 }
 
-func New(input string) *Lexer {
-	l := &Lexer{input: input, line: 1}
+func New(input string, name string) *Lexer {
+	l := &Lexer{input: input, line: 1, name: name}
 	l.readChar()
 
 	return l
@@ -26,6 +27,7 @@ func New(input string) *Lexer {
 
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
+	tok.FileName = l.name
 
 	for {
 		l.skipWhitespace()
@@ -45,22 +47,22 @@ func (l *Lexer) NextToken() token.Token {
 				ch2 := l.ch
 				l.readChar()
 				literal := string(ch) + string(ch2) + string(l.ch)
-				tok = token.Token{Type: token.ARRAY_EQ, Literal: literal, Line: l.line, Column: col}
+				tok = token.Token{Type: token.ARRAY_EQ, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 			} else {
 				ch := l.ch
 				col := l.column
 				l.readChar()
 				literal := string(ch) + string(l.ch)
-				tok = token.Token{Type: token.EQ, Literal: literal, Line: l.line, Column: col}
+				tok = token.Token{Type: token.EQ, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 			}
 		} else if l.getNextChar() == '>' {
 			ch := l.ch
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.ARROW, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.ARROW, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.ASSIGN, l.ch, l.line, l.column)
+			tok = newToken(token.ASSIGN, l.ch, l)
 		}
 	case '+':
 		if l.getNextChar() == '+' {
@@ -68,51 +70,51 @@ func (l *Lexer) NextToken() token.Token {
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.CONCAT, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.CONCAT, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.PLUS, l.ch, l.line, l.column)
+			tok = newToken(token.PLUS, l.ch, l)
 		}
 	case '-':
-		tok = newToken(token.MINUS, l.ch, l.line, l.column)
+		tok = newToken(token.MINUS, l.ch, l)
 	case '/':
-		tok = newToken(token.SLASH, l.ch, l.line, l.column)
+		tok = newToken(token.SLASH, l.ch, l)
 	case '\\':
-		tok = newToken(token.BACKSLASH, l.ch, l.line, l.column)
+		tok = newToken(token.BACKSLASH, l.ch, l)
 	case '%':
-		tok = newToken(token.MOD, l.ch, l.line, l.column)
+		tok = newToken(token.MOD, l.ch, l)
 	case '*':
 		if l.getNextChar() == '*' {
 			ch := l.ch
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.POW, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.POW, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.ASTERISK, l.ch, l.line, l.column)
+			tok = newToken(token.ASTERISK, l.ch, l)
 		}
 	case '(':
-		tok = newToken(token.LPAREN, l.ch, l.line, l.column)
+		tok = newToken(token.LPAREN, l.ch, l)
 	case ')':
-		tok = newToken(token.RPAREN, l.ch, l.line, l.column)
+		tok = newToken(token.RPAREN, l.ch, l)
 	case '{':
-		tok = newToken(token.LBRACE, l.ch, l.line, l.column)
+		tok = newToken(token.LBRACE, l.ch, l)
 	case '}':
-		tok = newToken(token.RBRACE, l.ch, l.line, l.column)
+		tok = newToken(token.RBRACE, l.ch, l)
 	case '[':
-		tok = newToken(token.LBRACKET, l.ch, l.line, l.column)
+		tok = newToken(token.LBRACKET, l.ch, l)
 	case ']':
-		tok = newToken(token.RBRACKET, l.ch, l.line, l.column)
+		tok = newToken(token.RBRACKET, l.ch, l)
 	case '@':
-		tok = newToken(token.AT, l.ch, l.line, l.column)
+		tok = newToken(token.AT, l.ch, l)
 	case '<':
 		if l.getNextChar() == '=' {
 			ch := l.ch
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.LTE, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.LTE, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.LT, l.ch, l.line, l.column)
+			tok = newToken(token.LT, l.ch, l)
 		}
 	case '>':
 		if l.getNextChar() == '=' {
@@ -120,9 +122,9 @@ func (l *Lexer) NextToken() token.Token {
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.GTE, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.GTE, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.GT, l.ch, l.line, l.column)
+			tok = newToken(token.GT, l.ch, l)
 		}
 	case '!':
 		if l.getNextChar() == '=' {
@@ -133,16 +135,16 @@ func (l *Lexer) NextToken() token.Token {
 				ch2 := l.ch
 				l.readChar()
 				literal := string(ch) + string(ch2) + string(l.ch)
-				tok = token.Token{Type: token.ARRAY_NEQ, Literal: literal, Line: l.line, Column: col}
+				tok = token.Token{Type: token.ARRAY_NEQ, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 			} else {
 				ch := l.ch
 				col := l.column
 				l.readChar()
 				literal := string(ch) + string(l.ch)
-				tok = token.Token{Type: token.NEQ, Literal: literal, Line: l.line, Column: col}
+				tok = token.Token{Type: token.NEQ, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 			}
 		} else {
-			tok = newToken(token.BANG, l.ch, l.line, l.column)
+			tok = newToken(token.BANG, l.ch, l)
 		}
 	case '|':
 		if l.getNextChar() == '>' {
@@ -150,9 +152,9 @@ func (l *Lexer) NextToken() token.Token {
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.PIPE, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.PIPE, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch, l.line, l.column)
+			tok = newToken(token.ILLEGAL, l.ch, l)
 		}
 	case ':':
 		if l.getNextChar() == ':' {
@@ -160,7 +162,7 @@ func (l *Lexer) NextToken() token.Token {
 			col := l.column
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.DOTDOT, Literal: literal, Line: l.line, Column: col}
+			tok = token.Token{Type: token.DOTDOT, Literal: literal, Line: l.line, Column: col, FileName: l.name}
 		} else {
 			tok.Line = l.line
 			tok.Column = l.column
@@ -169,7 +171,7 @@ func (l *Lexer) NextToken() token.Token {
 			return tok
 		}
 	case '.':
-		tok = newToken(token.DOT, l.ch, l.line, l.column)
+		tok = newToken(token.DOT, l.ch, l)
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -224,7 +226,7 @@ func (l *Lexer) NextToken() token.Token {
 			}
 			return tok
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch, l.line, l.column)
+			tok = newToken(token.ILLEGAL, l.ch, l)
 		}
 	}
 	l.readChar()
@@ -269,8 +271,8 @@ func (l *Lexer) skipWhitespace() {
 	}
 }
 
-func newToken(tokenType token.TokenType, ch byte, line int, column int) token.Token {
-	return token.Token{Type: tokenType, Literal: string(ch), Line: line, Column: column}
+func newToken(tokenType token.TokenType, ch byte, l *Lexer) token.Token {
+	return token.Token{Type: tokenType, Literal: string(ch), Line: l.line, Column: l.column, FileName: l.name}
 }
 
 func isLetter(ch byte) bool {

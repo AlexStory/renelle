@@ -66,10 +66,11 @@ const (
 type TokenType string
 
 type Token struct {
-	Type    TokenType
-	Literal string
-	Line    int
-	Column  int
+	Type     TokenType
+	Literal  string
+	Line     int
+	Column   int
+	FileName string
 }
 
 var TokenMap = map[string]TokenType{

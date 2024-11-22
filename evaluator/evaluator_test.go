@@ -40,7 +40,7 @@ func TestEvalIntegerExpression(t *testing.T) {
 }
 
 func testEval(input string) object.Object {
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := parser.New(l)
 	program := p.ParseProgram()
 	env := object.NewEnvironment()

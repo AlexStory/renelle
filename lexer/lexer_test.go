@@ -156,7 +156,7 @@ $"hello {name}"
 		{token.EOF, "", 36, 1},
 	}
 
-	l := New(input)
+	l := New(input, "test")
 
 	for i, tt := range tests {
 		tok := l.NextToken()
@@ -187,7 +187,7 @@ $"hello {name}"
 func Test0Floats(t *testing.T) {
 	input := `0.14`
 
-	l := New(input)
+	l := New(input, "test")
 	tok := l.NextToken()
 
 	if tok.Type != token.FLOAT {
@@ -215,7 +215,7 @@ func TestFunctionLiteralLexing(t *testing.T) {
 		{token.EOF, ""},
 	}
 
-	l := New(input)
+	l := New(input, "test")
 
 	for i, tt := range tests {
 		tok := l.NextToken()
@@ -247,7 +247,7 @@ func TestNextToken_FUNCCALL(t *testing.T) {
 		{token.EOF, "", 1, 26},
 	}
 
-	l := New(input)
+	l := New(input, "test")
 
 	for i, tt := range tests {
 		tok := l.NextToken()
@@ -308,7 +308,7 @@ fn subtract x y { # comment at end of line
 		{token.EOF, "", 9, 1},
 	}
 
-	l := New(input)
+	l := New(input, "test")
 
 	for i, tt := range tests {
 		tok := l.NextToken()
@@ -339,7 +339,7 @@ fn subtract x y { # comment at end of line
 func TestUnderscoreInInteger(t *testing.T) {
 	input := `123_456 78_90`
 
-	l := New(input)
+	l := New(input, "test")
 
 	tests := []struct {
 		expectedType    token.TokenType

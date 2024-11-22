@@ -89,7 +89,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			l := lexer.New(string(content))
+			l := lexer.New(string(content), filename)
 			p := parser.New(l)
 			program := p.ParseProgram()
 			if len(p.Errors()) != 0 {
@@ -144,7 +144,7 @@ func runFile(filename string, moduleName string, args []string) {
 		os.Exit(1)
 	}
 
-	l := lexer.New(string(content))
+	l := lexer.New(string(content), filename)
 	p := parser.New(l)
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
@@ -186,7 +186,7 @@ func getModuleName(dir string, args []string) (string, error) {
 		return "", err
 	}
 
-	l := lexer.New(string(rnlContent))
+	l := lexer.New(string(rnlContent), rnlFilename)
 	p := parser.New(l)
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {

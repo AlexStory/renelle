@@ -72,6 +72,21 @@ type EvalContext struct {
 	MetaData *MetaData
 	Line     int
 	Column   int
+	FileName string
+}
+
+func (e *EvalContext) Copy() EvalContext {
+	newMetaData := make(MetaData)
+	for k, v := range *e.MetaData {
+		newMetaData[k] = v
+	}
+
+	return EvalContext{
+		MetaData: &newMetaData,
+		Line:     e.Line,
+		Column:   e.Column,
+		FileName: e.FileName,
+	}
 }
 
 func NewEvalContext() *EvalContext {

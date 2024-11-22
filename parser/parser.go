@@ -350,9 +350,7 @@ func (p *Parser) parseStringSegments(input string) []ast.Expression {
 }
 
 func (p *Parser) parseExpressionFromString(input string) ast.Expression {
-	// This function should parse the expression from the string input
-	// For simplicity, let's assume it returns an identifier for now
-	l := lexer.New(input)
+	l := lexer.New(input, p.curToken.FileName)
 	exprParser := New(l)
 	expression := exprParser.parseExpression(LOWEST)
 	return expression

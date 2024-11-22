@@ -31,6 +31,12 @@ func ApplyFunction(fn object.Object, args []object.Object, ctx *object.EvalConte
 }
 
 func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) object.Object {
+	if node != nil {
+		ctx.Column = node.T().Column
+		ctx.Line = node.T().Line
+		ctx.FileName = node.T().FileName
+	}
+
 	switch node := node.(type) {
 
 	// statements
@@ -69,7 +75,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		case *ast.Identifier:
 			if left.Value != "_" {
 				if unicode.IsUpper(rune(left.Value[0])) {
-					return newError(node.Token.Line, node.Token.Column, "local variables can not start with an uppercase letter")
+					return newError(ctx, "local variables can not start with an uppercase letter")
 				}
 				env.Set(left.Value, val)
 			}
@@ -86,7 +92,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 			ctx.Column = node.Token.Column
 			return handleMapDestructuring(left, val, env, ctx)
 		default:
-			return newError(node.Token.Line, node.Token.Column, "invalid left-hand side of assignment")
+			return newError(ctx, "invalid left-hand side of assignment")
 		}
 		return val
 	case *ast.Module:
@@ -156,7 +162,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		return getOrCreateAtom(node.Value)
 
 	case *ast.Identifier:
-		return evalIdentifier(node, env)
+		return evalIdentifier(ctx, node, env)
 	case *ast.PropertyAccessExpression:
 		left := Eval(node.Left, env, ctx)
 		if isError(left) {
@@ -171,7 +177,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 		if isError(right) {
 			return right
 		}
-		return evalPrefixExpression(node.Operator, right, node.Token.Line, node.Token.Column)
+		return evalPrefixExpression(ctx, node.Operator, right)
 
 	case *ast.InfixExpression:
 		if node.Operator == "::" {
@@ -189,11 +195,11 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 					callExpr.Arguments = append([]ast.Expression{node.Left}, callExpr.Arguments...)
 					return Eval(right, env, ctx)
 				} else {
-					return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
+					return newError(ctx, "pipe operator must be followed by a function call")
 				}
 			case *ast.FunctionLiteral:
 				if len(right.Parameters) != 1 {
-					return newError(node.Token.Line, node.Token.Column, "function literal must take exactly one argument")
+					return newError(ctx, "function literal must take exactly one argument")
 				}
 				newCall := &ast.CallExpression{
 					Function:  right,
@@ -201,7 +207,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 				}
 				return Eval(newCall, env, ctx)
 			default:
-				return newError(node.Token.Line, node.Token.Column, "pipe operator must be followed by a function call")
+				return newError(ctx, "pipe operator must be followed by a function call")
 			}
 		}
 
@@ -267,7 +273,7 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 				}
 			}
 		}
-		return newError(node.Token.Line, node.Token.Column, "no matching case")
+		return newError(ctx, "no matching case")
 	case *ast.IfExpression:
 		return evalIfExpression(node, env, ctx)
 
@@ -329,10 +335,10 @@ func evalExpressions(exps []ast.Expression, env *object.Environment, ctx *object
 func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
 	tupleObject, ok := val.(*object.Tuple)
 	if !ok {
-		return newError(ctx.Line, ctx.Column, "right-hand side of assignment is not a tuple")
+		return newError(ctx, "right-hand side of assignment is not a tuple")
 	}
 	if len(tuple.Elements) != len(tupleObject.Elements) {
-		return newError(ctx.Line, ctx.Column, "cannot destructure tuple: size mismatch")
+		return newError(ctx, "cannot destructure tuple: size mismatch")
 	}
 	for i, el := range tuple.Elements {
 		switch el := el.(type) {
@@ -340,7 +346,7 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 			if el.Value == "_" {
 				continue
 			} else if unicode.IsUpper(rune(el.Value[0])) {
-				return newError(el.Token.Line, el.Token.Column, "local variables can not start with an uppercase letter")
+				return newError(ctx, "local variables can not start with an uppercase letter")
 			}
 			env.Set(el.Value, tupleObject.Elements[i])
 		case *ast.TupleLiteral:
@@ -353,8 +359,7 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 				return leftVal
 			}
 			if !object.Equals(leftVal, tupleObject.Elements[i]) {
-				tok := tuple.Elements[i]
-				return newError(tok.T().Line, tok.T().Column, "cannot destructure tuple: value mismatch")
+				return newError(ctx, "cannot destructure tuple: value mismatch")
 			}
 		}
 	}
@@ -364,10 +369,10 @@ func handleTupleDestructuring(tuple *ast.TupleLiteral, val object.Object, env *o
 func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
 	arrayObject, ok := val.(*object.Array)
 	if !ok {
-		return newError(ctx.Line, ctx.Column, "right-hand side of assignment is not an array")
+		return newError(ctx, "right-hand side of assignment is not an array")
 	}
 	if len(array.Elements) != len(arrayObject.Elements) {
-		return newError(ctx.Line, ctx.Column, "cannot destructure array: size mismatch")
+		return newError(ctx, "cannot destructure array: size mismatch")
 	}
 	for i, el := range array.Elements {
 		switch el := el.(type) {
@@ -375,7 +380,7 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 			if el.Value == "_" {
 				continue
 			} else if unicode.IsUpper(rune(el.Value[0])) {
-				return newError(el.Token.Line, el.Token.Column, "local variables can not start with an uppercase letter")
+				return newError(ctx, "local variables can not start with an uppercase letter")
 			}
 			env.Set(el.Value, arrayObject.Elements[i])
 		case *ast.TupleLiteral:
@@ -388,8 +393,7 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 				return leftVal
 			}
 			if !object.Equals(leftVal, arrayObject.Elements[i]) {
-				tok := array.Elements[i]
-				return newError(tok.T().Line, tok.T().Column, "cannot destructure array: value mismatch")
+				return newError(ctx, "cannot destructure array: value mismatch")
 			}
 		}
 	}
@@ -399,7 +403,7 @@ func handleArrayDestructuring(array *ast.ArrayLiteral, val object.Object, env *o
 func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object.Environment, ctx *object.EvalContext) object.Object {
 	mapObj, ok := val.(*object.Map)
 	if !ok {
-		return newError(ctx.Line, ctx.Column, "expected map, got %s", val.Type())
+		return newError(ctx, "expected map, got %s", val.Type())
 	}
 
 	for keyExpr, valueExpr := range left.Pairs {
@@ -412,7 +416,7 @@ func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object
 		// Get the value from the map
 		value, ok := mapObj.Get(keyVal)
 		if !ok {
-			return newError(ctx.Line, ctx.Column, "key not found: %s", keyVal.Inspect())
+			return newError(ctx, "key not found: %s", keyVal.Inspect())
 		}
 
 		// Handle the value expression based on its type
@@ -420,7 +424,7 @@ func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object
 		case *ast.Identifier:
 			// Set the value in the environment under the name given by the value expression
 			if unicode.IsUpper(rune(valueExpr.Value[0])) {
-				return newError(valueExpr.Token.Line, valueExpr.Token.Column, "local variables can not start with an uppercase letter")
+				return newError(ctx, "local variables can not start with an uppercase letter")
 			}
 			if valueExpr.Value != "_" {
 				env.Set(valueExpr.Value, value)
@@ -443,7 +447,7 @@ func handleMapDestructuring(left *ast.MapLiteral, val object.Object, env *object
 
 			// Check if the value matches the value expression
 			if !object.Equals(valueVal, value) {
-				return newError(ctx.Line, ctx.Column, "cannot destructure map: value mismatch")
+				return newError(ctx, "cannot destructure map: value mismatch")
 			}
 		}
 	}
@@ -464,7 +468,7 @@ func evalMapLiteral(node *ast.MapLiteral, env *object.Environment, ctx *object.E
 
 		_, ok := key.(object.Hashable)
 		if !ok {
-			return newError(ctx.Line, ctx.Column, "unusable as hash key: %s", key.Type())
+			return newError(ctx, "unusable as hash key: %s", key.Type())
 		}
 
 		value := Eval(valueNode, env, ctx)
@@ -486,7 +490,7 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, env 
 			// Get the function from the module
 			funcObj, ok := left.Environment.Get(right.Value)
 			if !ok {
-				return newError(ctx.Line, ctx.Column, "property %s not found", right.Value)
+				return newError(ctx, "property %s not found", right.Value)
 			}
 
 			// Check if the object is a function or a built-in
@@ -494,19 +498,19 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, env 
 			case *object.Function, *object.Builtin:
 				return funcObj
 			default:
-				return newError(ctx.Line, ctx.Column, "property %s is not a function", right.Value)
+				return newError(ctx, "property %s is not a function", right.Value)
 			}
 		case *ast.CallExpression:
 			// Ensure the function expression is an Identifier
 			ident, ok := right.Function.(*ast.Identifier)
 			if !ok {
-				return newError(ctx.Line, ctx.Column, "invalid function call: %s", right.Function.String())
+				return newError(ctx, "invalid function call: %s", right.Function.String())
 			}
 
 			// Get the function from the module
 			funcObj, ok := left.Environment.Get(ident.Value)
 			if !ok {
-				return newError(ctx.Line, ctx.Column, "function %s not found", ident.Value)
+				return newError(ctx, "function %s not found", ident.Value)
 			}
 
 			switch funcObj := funcObj.(type) {
@@ -523,17 +527,17 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, env 
 				// Apply the built-in function to the arguments
 				return funcObj.Fn(ctx, args...)
 			default:
-				return newError(ctx.Line, ctx.Column, "property %s is not a function", ident.Value)
+				return newError(ctx, "property %s is not a function", ident.Value)
 			}
 
 		default:
-			return newError(ctx.Line, ctx.Column, "invalid property access: %s", right.String())
+			return newError(ctx, "invalid property access: %s", right.String())
 		}
 	case *object.Map:
 		// Ensure the right expression is an Identifier
 		ident, ok := right.(*ast.Identifier)
 		if !ok {
-			return newError(ctx.Line, ctx.Column, "invalid property access: %s", right.String())
+			return newError(ctx, "invalid property access: %s", right.String())
 		}
 
 		// Get or create the atom for the identifier
@@ -545,7 +549,7 @@ func evalPropertyAccessExpression(left object.Object, right ast.Expression, env 
 		}
 		return value
 	default:
-		return newError(ctx.Line, ctx.Column, "property access not supported: %s", left.Type())
+		return newError(ctx, "property access not supported: %s", left.Type())
 	}
 }
 
@@ -557,7 +561,7 @@ func evalMapUpdateLiteral(node *ast.MapUpdateLiteral, env *object.Environment, c
 
 	mapObjTyped, ok := mapObj.(*object.Map)
 	if !ok {
-		return newError(ctx.Line, ctx.Column, "not a map: %s", mapObj.Type())
+		return newError(ctx, "not a map: %s", mapObj.Type())
 	}
 
 	mapCopy := mapObjTyped.Copy(len(node.Right))
@@ -582,7 +586,7 @@ func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalConte
 	switch fn := fn.(type) {
 	case *object.Function:
 		if len(args) != len(fn.Parameters) {
-			return newError(ctx.Line, ctx.Column, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
+			return newError(ctx, "wrong number of arguments. got=%d, want=%d", len(args), len(fn.Parameters))
 		}
 		extendedEnv := extendFunctionEnv(fn, args, ctx)
 		evaluated := Eval(fn.Body, extendedEnv, ctx)
@@ -590,7 +594,7 @@ func applyFunction(fn object.Object, args []object.Object, ctx *object.EvalConte
 	case *object.Builtin:
 		return fn.Fn(ctx, args...)
 	default:
-		return newError(ctx.Line, ctx.Column, "not a function: %s", fn.Type())
+		return newError(ctx, "not a function: %s", fn.Type())
 	}
 }
 
@@ -668,7 +672,7 @@ func evalSliceExpression(left, right ast.Expression, env *object.Environment, ct
 	}
 
 	if start.Type() != object.INTEGER_OBJ || stop.Type() != object.INTEGER_OBJ {
-		return newError(ctx.Line, ctx.Column, "slice bounds must be integers")
+		return newError(ctx, "slice bounds must be integers")
 	}
 	return &object.Slice{Start: start, End: stop}
 }
@@ -689,7 +693,7 @@ func evalIndexExpression(ctx *object.EvalContext, left, index object.Object) obj
 		return evalMapIndexExpression(ctx, left, index)
 	default:
 		fmt.Print(index.Type())
-		return newError(ctx.Line, ctx.Column, "index operator not supported: %s", left.Type())
+		return newError(ctx, "index operator not supported: %s", left.Type())
 	}
 }
 
@@ -697,6 +701,10 @@ func evalArrayIndexExpression(ctx *object.EvalContext, array, index object.Objec
 	arrayObject := array.(*object.Array)
 	idx := index.(*object.Integer).Value
 	max := int64(len(arrayObject.Elements) - 1)
+
+	if idx < 0 {
+		idx = int64(len(arrayObject.Elements)) + idx
+	}
 
 	if idx < 0 || idx > max {
 		return constants.NIL
@@ -712,9 +720,20 @@ func evalArraySliceExpression(ctx *object.EvalContext, array, slice object.Objec
 	start := sliceObject.Start.(*object.Integer).Value
 	stop := sliceObject.End.(*object.Integer).Value
 
+	arrayLen := int64(len(arrayObject.Elements))
+
 	if start < 0 {
+		start = arrayLen + start
+	}
+
+	if start < 0 || start >= arrayLen {
 		start = 0
 	}
+
+	if stop < 0 {
+		stop = arrayLen + stop
+	}
+
 	if stop > int64(len(arrayObject.Elements)) {
 		stop = int64(len(arrayObject.Elements))
 	}
@@ -731,7 +750,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 	maskObject := mask.(*object.Array)
 
 	if len(maskObject.Elements) == 0 {
-		return newError(ctx.Line, ctx.Column, "mask array is empty")
+		return newError(ctx, "mask array is empty")
 	}
 
 	// Check the type of the first element in the mask array
@@ -739,7 +758,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 	case *object.Boolean:
 		// Handle boolean mask
 		if len(arrayObject.Elements) != len(maskObject.Elements) {
-			return newError(ctx.Line, ctx.Column, "array length mismatch: %d != %d", len(arrayObject.Elements), len(maskObject.Elements))
+			return newError(ctx, "array length mismatch: %d != %d", len(arrayObject.Elements), len(maskObject.Elements))
 		}
 
 		elements := []object.Object{}
@@ -756,7 +775,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 		for _, idxObj := range maskObject.Elements {
 			idx := idxObj.(*object.Integer).Value
 			if idx < 0 || idx >= int64(len(arrayObject.Elements)) {
-				return newError(ctx.Line, ctx.Column, "index out of bounds: %d", idx)
+				return newError(ctx, "index out of bounds: %d", idx)
 			}
 			elements = append(elements, arrayObject.Elements[idx])
 		}
@@ -764,7 +783,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 	case *object.Array:
 		elements := []object.Object{}
 		if len(maskObject.Elements) == 0 {
-			return newError(ctx.Line, ctx.Column, "mask cannot be empty")
+			return newError(ctx, "mask cannot be empty")
 		}
 		headMask := maskObject.Elements[0]
 		tailMask := &object.Array{Elements: maskObject.Elements[1:]}
@@ -776,7 +795,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 
 		rowArray, ok := rows.(*object.Array)
 		if !ok {
-			return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", rows.Type())
+			return newError(ctx, "invalid mask element type: %s", rows.Type())
 		}
 		for _, r := range rowArray.Elements {
 			newRow := evalIndexExpression(ctx, r, tailMask)
@@ -793,7 +812,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 
 		rowArray, ok := rows.(*object.Array)
 		if !ok {
-			return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", rows.Type())
+			return newError(ctx, "invalid mask element type: %s", rows.Type())
 		}
 
 		elements := []object.Object{}
@@ -804,7 +823,7 @@ func evalArrayMaskExpression(ctx *object.EvalContext, array, mask object.Object)
 		return &object.Array{Elements: elements}
 
 	default:
-		return newError(ctx.Line, ctx.Column, "invalid mask element type: %s", maskObject.Elements[0].Type())
+		return newError(ctx, "invalid mask element type: %s", maskObject.Elements[0].Type())
 	}
 }
 
@@ -841,12 +860,12 @@ func evalStringIndexExpression(ctx *object.EvalContext, str, index object.Object
 	return &object.String{Value: string(strObject.Value[idx])}
 }
 
-func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object {
+func evalIdentifier(ctx *object.EvalContext, node *ast.Identifier, env *object.Environment) object.Object {
 	if unicode.IsUpper([]rune(node.Value)[0]) {
 		if module, ok := env.GetModule(node.Value); ok {
 			return module
 		} else {
-			module := loadModule(node.Value, env)
+			module := loadModule(ctx, node.Value, env)
 			if error, ok := module.(*object.Error); ok {
 				return error
 			}
@@ -866,17 +885,17 @@ func evalIdentifier(node *ast.Identifier, env *object.Environment) object.Object
 			return &object.Builtin{Fn: loop}
 		}
 	}
-	return newError(node.Token.Line, node.Token.Column, "identifier not found: "+node.Value)
+	return newError(ctx, "identifier not found: "+node.Value)
 }
 
-func evalPrefixExpression(operator string, right object.Object, line, col int) object.Object {
+func evalPrefixExpression(ctx *object.EvalContext, operator string, right object.Object) object.Object {
 	switch operator {
 	case "!":
 		return evalBangOperatorExpression(right)
 	case "-":
-		return evalMinusPrefixOperatorExpression(right, line, col)
+		return evalMinusPrefixOperatorExpression(ctx, right)
 	default:
-		return newError(line, col, "unknown operator: %s%s", operator, right.Type())
+		return newError(ctx, "unknown operator: %s%s", operator, right.Type())
 
 	}
 }
@@ -907,9 +926,9 @@ func evalInfixExpression(ctx *object.EvalContext, operator string, left, right o
 	case operator == "!=":
 		return nativeBoolToBooleanObject(left != right)
 	case left.Type() != right.Type():
-		return newError(ctx.Line, ctx.Column, "type mismatch: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	default:
-		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -943,7 +962,7 @@ func evalIntegerInfixExpression(ctx *object.EvalContext, operator string, left, 
 	case "!=":
 		return nativeBoolToBooleanObject(leftVal != rightVal)
 	default:
-		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -1001,7 +1020,7 @@ func evalStringInfixExpression(ctx *object.EvalContext, operator string, left, r
 	case ">=":
 		return nativeBoolToBooleanObject(leftVal >= rightVal)
 	default:
-		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 
 }
@@ -1012,7 +1031,7 @@ func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, ri
 	switch operator {
 	case "+", "-", "*", "/", "%", "**", "<", ">", ">=", "<=", "==", "!=":
 		if len(leftVal.Elements) != len(rightVal.Elements) {
-			return newError(ctx.Line, ctx.Column, "vector length mismatch: %d != %d", len(leftVal.Elements), len(rightVal.Elements))
+			return newError(ctx, "vector length mismatch: %d != %d", len(leftVal.Elements), len(rightVal.Elements))
 		}
 
 		elements := make([]object.Object, len(leftVal.Elements))
@@ -1044,7 +1063,7 @@ func evalArrayInfixExpression(ctx *object.EvalContext, operator string, left, ri
 		}
 		return constants.FALSE
 	default:
-		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -1060,7 +1079,7 @@ func evalArrayMathExpression(ctx *object.EvalContext, operator string, left obje
 
 		return &object.Array{Elements: elements}
 	default:
-		return newError(ctx.Line, ctx.Column, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
+		return newError(ctx, "unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
 }
 
@@ -1106,14 +1125,16 @@ func evalCondExpression(ce *ast.CondExpression, env *object.Environment, ctx *ob
 	return constants.NIL
 }
 
-func evalMinusPrefixOperatorExpression(right object.Object, line, col int) object.Object {
+func evalMinusPrefixOperatorExpression(ctx *object.EvalContext, right object.Object) object.Object {
 	switch right := right.(type) {
 	case *object.Integer:
 		return &object.Integer{Value: -right.Value}
 	case *object.Float:
 		return &object.Float{Value: -right.Value}
+	case *object.Slice:
+		return &object.Slice{Start: evalMinusPrefixOperatorExpression(ctx, right.Start), End: right.End}
 	default:
-		return newError(line, col, "unknown operator: -%s", right.Type())
+		return newError(ctx, "unknown operator: -%s", right.Type())
 	}
 }
 
@@ -1144,8 +1165,13 @@ func isTruthy(obj object.Object) bool {
 	}
 }
 
-func newError(line, column int, format string, a ...interface{}) *object.Error {
-	return &object.Error{Message: fmt.Sprintf(format, a...), Line: line, Column: column}
+func newError(ctx *object.EvalContext, format string, a ...interface{}) *object.Error {
+	return &object.Error{
+		Message:  fmt.Sprintf(format, a...),
+		Line:     ctx.Line,
+		Column:   ctx.Column,
+		FileName: ctx.FileName,
+	}
 }
 
 func isError(obj object.Object) bool {
@@ -1155,7 +1181,7 @@ func isError(obj object.Object) bool {
 	return false
 }
 
-func loadModule(moduleName string, env *object.Environment) object.Object {
+func loadModule(ctx *object.EvalContext, moduleName string, env *object.Environment) object.Object {
 	moduleParts := strings.Split(moduleName, ".")
 	// Convert each part of the module name to lowercase
 	for i, part := range moduleParts {
@@ -1166,18 +1192,18 @@ func loadModule(moduleName string, env *object.Environment) object.Object {
 	depsModulePath := filepath.Join(append([]string{".deps", moduleParts[0], "src"}, moduleParts[1:]...)...) + ".rnl"
 	stdLibModulePath := filepath.Join(moduleParts...) + ".rnl"
 	if _, err := stdlib.Files.Open(stdLibModulePath); err == nil {
-		return loadModuleFromEmbedFS(stdlib.Files, stdLibModulePath, env, moduleName)
+		return loadModuleFromEmbedFS(ctx, stdlib.Files, stdLibModulePath, env, moduleName)
 	}
 	// Check the local src directory first
 	if _, err := os.Stat(localModulePath); err == nil {
-		return loadModuleFromFile(localModulePath, env, moduleName)
+		return loadModuleFromFile(ctx, localModulePath, env, moduleName)
 	}
 	// If the module is not found locally, check the .deps directory
 	if _, err := os.Stat(depsModulePath); err == nil {
-		return loadModuleFromFile(depsModulePath, env, moduleName)
+		return loadModuleFromFile(ctx, depsModulePath, env, moduleName)
 	}
 
-	return newError(0, 0, "module not found: %s", moduleName)
+	return newError(ctx, "module not found: %s", moduleName)
 }
 
 func toSnakeCase(s string) string {
@@ -1230,43 +1256,43 @@ func toSnakeCase(s string) string {
 	return string(result)
 }
 
-func loadModuleFromFile(modulePath string, env *object.Environment, moduleName string) object.Object {
+func loadModuleFromFile(ctx *object.EvalContext, modulePath string, env *object.Environment, moduleName string) object.Object {
 	moduleContent, err := os.ReadFile(modulePath)
 	if err != nil {
-		return newError(0, 0, "error reading module file: %s", err)
+		return newError(ctx, "error reading module file: %s", err)
 	}
 
-	l := lexer.New(string(moduleContent))
+	l := lexer.New(string(moduleContent), modulePath)
 	p := parser.New(l)
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
-		return newError(0, 0, "parser errors: %v", p.Errors())
+		return newError(ctx, "parser errors: %v", p.Errors())
 	}
 
-	ctx := object.NewEvalContext()
-	Eval(program, env.Root(), ctx)
+	newctx := object.NewEvalContext()
+	Eval(program, env.Root(), newctx)
 	if module, ok := env.GetModule(moduleName); ok {
 		return module
 	}
 
-	return newError(0, 0, "unknown error loading module: %s", moduleName)
+	return newError(ctx, "unknown error loading module: %s", moduleName)
 }
 
-func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environment, moduleName string) object.Object {
+func loadModuleFromEmbedFS(ctx *object.EvalContext, fs embed.FS, modulePath string, env *object.Environment, moduleName string) object.Object {
 	moduleContent, err := fs.ReadFile(modulePath)
 	if err != nil {
-		return newError(0, 0, "error reading module file: %s", err)
+		return newError(ctx, "error reading module file: %s", err)
 	}
 
-	l := lexer.New(string(moduleContent))
+	l := lexer.New(string(moduleContent), modulePath)
 	p := parser.New(l)
 	program := p.ParseProgram()
 	if len(p.Errors()) != 0 {
-		return newError(0, 0, "parser errors: %v", p.Errors())
+		return newError(ctx, "parser errors: %v", p.Errors())
 	}
 
-	ctx := object.NewEvalContext()
-	Eval(program, env.Root(), ctx)
+	newctx := object.NewEvalContext()
+	Eval(program, env.Root(), newctx)
 	if module, ok := env.GetModule(moduleName); ok {
 		switch moduleName {
 		case "Array":
@@ -1318,5 +1344,5 @@ func loadModuleFromEmbedFS(fs embed.FS, modulePath string, env *object.Environme
 		return module
 	}
 
-	return newError(0, 0, "unknown error loading module: %s", moduleName)
+	return newError(ctx, "unknown error loading module: %s", moduleName)
 }

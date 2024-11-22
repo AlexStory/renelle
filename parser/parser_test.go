@@ -15,7 +15,7 @@ let x  = 5
 let y = 10
 let foobar = 838383
 `
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -82,7 +82,7 @@ func TestReturnStatement(t *testing.T) {
     return 993322
     `
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -123,7 +123,7 @@ func TestReturnStatement(t *testing.T) {
 func TestIdentifierExpression(t *testing.T) {
 	input := "foobar"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -168,7 +168,7 @@ func checkParserErrors(t *testing.T, p *Parser) {
 func TestIntegerLiteralExpression(t *testing.T) {
 	input := "5"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -200,7 +200,7 @@ func TestIntegerLiteralExpression(t *testing.T) {
 func TestFloatLiteralExpression(t *testing.T) {
 	input := "3.14"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -236,7 +236,7 @@ func TestParsingPrefixExpressions(t *testing.T) {
 	}
 
 	for _, tt := range prefixTests {
-		l := lexer.New(tt.input)
+		l := lexer.New(tt.input, "test")
 		p := New(l)
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
@@ -307,7 +307,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 	}
 
 	for _, tt := range infixTests {
-		l := lexer.New(tt.input)
+		l := lexer.New(tt.input, "test")
 		p := New(l)
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
@@ -380,7 +380,7 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		l := lexer.New(tt.input)
+		l := lexer.New(tt.input, "test")
 		p := New(l)
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
@@ -480,7 +480,7 @@ func testInfixExpression(t *testing.T, exp ast.Expression, left interface{},
 func TestBooleanExpression(t *testing.T) {
 	input := "true"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -524,7 +524,7 @@ func testBoolean(t *testing.T, exp ast.Expression, value bool) bool {
 func TestIfExpression(t *testing.T) {
 	input := `if (x < y) { x }`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -573,7 +573,7 @@ func TestIfExpression(t *testing.T) {
 func TestIfElseExpression(t *testing.T) {
 	input := `if (x < y) { x } else { y }`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -625,7 +625,7 @@ func TestFunctionLiteralParsing(t *testing.T) {
     \ x => x * 2
     \ x y => { x + y }`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -665,7 +665,7 @@ func TestFunctionLiteralParsing(t *testing.T) {
 func TestFunctionStatement(t *testing.T) {
 	input := `fn add(x y) { x + y }`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -706,7 +706,7 @@ func TestFunctionStatement(t *testing.T) {
 func TestCallExpressionParsing(t *testing.T) {
 	input := "add(1 (2 * 3) (4 + 5))"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -750,7 +750,7 @@ func TestCallExpressionParsing(t *testing.T) {
 func TestAtomExpressionParsing(t *testing.T) {
 	input := ":ok"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -787,7 +787,7 @@ fn subtract(x y) { # comment at end of line
     x - y # comment at end of line
 } # comment at end of line`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -844,7 +844,7 @@ func testFunctionStatement(t *testing.T, s ast.Statement, name string) bool {
 func TestLetReturnStatement(t *testing.T) {
 	input := "let a = 5 a"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -866,7 +866,7 @@ func TestLetReturnStatement(t *testing.T) {
 func TestMultipleLetStatements(t *testing.T) {
 	input := "let a = 5 let b = a let c = a + b + 5 c"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -910,7 +910,7 @@ func TestFunctionCallParsing(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		l := lexer.New(tt.input)
+		l := lexer.New(tt.input, "test")
 		p := New(l)
 		program := p.ParseProgram()
 		checkParserErrors(t, p)
@@ -934,7 +934,7 @@ func TestFunctionCallParsing(t *testing.T) {
 func TestStringLiteralExpression(t *testing.T) {
 	input := `"hello world";`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -952,7 +952,7 @@ func TestStringLiteralExpression(t *testing.T) {
 func TestInterpolatedStringLiteral_NoExpressions(t *testing.T) {
 	input := `$"hello world"`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -980,7 +980,7 @@ func TestInterpolatedStringLiteral_NoExpressions(t *testing.T) {
 func TestInterpolatedStringLiteral_OneExpression(t *testing.T) {
 	input := `$"hello {name}"`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1017,7 +1017,7 @@ func TestInterpolatedStringLiteral_OneExpression(t *testing.T) {
 func TestInterpolatedStringLiteral_MultipleExpressions(t *testing.T) {
 	input := `$"hello {name}, you have {count} new messages"`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1147,7 +1147,7 @@ func TestParseStringSegments(t *testing.T) {
 func TestParsingArrayLiterals(t *testing.T) {
 	input := "[1 2 * 2 3 + 3]"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1170,7 +1170,7 @@ func TestParsingArrayLiterals(t *testing.T) {
 func TestParsingIndexExpressions(t *testing.T) {
 	input := "myArray @ 1 + 1"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1193,7 +1193,7 @@ func TestParsingIndexExpressions(t *testing.T) {
 func TestParsingTuples(t *testing.T) {
 	input := "(1 2 3 4 5)"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -1234,7 +1234,7 @@ func TestParsingTuples(t *testing.T) {
 func TestParsingMapLiteralsStringKeys(t *testing.T) {
 	input := `{"one" = 1, "two" = 2, "three" = 3}`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1270,7 +1270,7 @@ func TestParsingMapLiteralsStringKeys(t *testing.T) {
 func TestParsingEmptyHashLiteral(t *testing.T) {
 	input := "{}"
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1289,7 +1289,7 @@ func TestParsingEmptyHashLiteral(t *testing.T) {
 func TestParsingHashLiteralsWithExpressions(t *testing.T) {
 	input := `{"one" = 0 + 1, "two" = 10 - 8, "three" = 15 / 5}`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1336,7 +1336,7 @@ func TestParsingHashLiteralsWithExpressions(t *testing.T) {
 func TestParsingMapLiteralsAtomKeys(t *testing.T) {
 	input := `{name: "Hayley", age: 8}`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1390,7 +1390,7 @@ func testStringLiteral(t *testing.T, il ast.Expression, value string) {
 func TestPropertyAccessExpression(t *testing.T) {
 	input := `myMap.property`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -1434,7 +1434,7 @@ func TestCondExpression(t *testing.T) {
     }
     `
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -1467,7 +1467,7 @@ func TestCaseExpression(t *testing.T) {
     }
     `
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -1494,7 +1494,7 @@ func TestCaseExpression(t *testing.T) {
 
 func TestParseModuleIdentifier(t *testing.T) {
 	input := "MyApp.MyModule.MySubmodule"
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	identifier := p.parseIdentifier().(*ast.Identifier)
@@ -1503,7 +1503,7 @@ func TestParseModuleIdentifier(t *testing.T) {
 	}
 
 	input = "MyApp.MyModule.func"
-	l = lexer.New(input)
+	l = lexer.New(input, "test")
 	p = New(l)
 
 	identifier = p.parseIdentifier().(*ast.Identifier)
@@ -1519,7 +1519,7 @@ func TestParseModule(t *testing.T) {
     }
     `
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 
 	program := p.ParseProgram()
@@ -1555,7 +1555,7 @@ func TestParseModule(t *testing.T) {
 func TestModuleAccessExpression(t *testing.T) {
 	input := `Mod.func()`
 
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)
@@ -1597,7 +1597,7 @@ func TestModuleAccessExpression(t *testing.T) {
 
 func TestMapUpdateLiteral(t *testing.T) {
 	input := `{ identifier with key = "value", anotherKey = "anotherValue" }`
-	l := lexer.New(input)
+	l := lexer.New(input, "test")
 	p := New(l)
 	program := p.ParseProgram()
 	checkParserErrors(t, p)

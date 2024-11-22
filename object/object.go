@@ -179,13 +179,14 @@ func (rv *ReturnValue) Inspect() string  { return rv.Value.Inspect() }
 func (rv *ReturnValue) Type() ObjectType { return RETURN_VALUE_OBJ }
 
 type Error struct {
-	Message string
-	Line    int
-	Column  int
+	Message  string
+	Line     int
+	Column   int
+	FileName string
 }
 
 func (e *Error) Inspect() string {
-	return fmt.Sprintf("Line: %d, Column %d: ERROR: %s", e.Line, e.Column, e.Message)
+	return fmt.Sprintf("%s: Line: %d, Column %d: ERROR: %s", e.FileName, e.Line, e.Column, e.Message)
 }
 func (e *Error) Type() ObjectType { return ERROR_OBJ }
 

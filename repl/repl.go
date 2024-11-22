@@ -25,7 +25,7 @@ func Start() {
 		}
 
 		line := scanner.Text()
-		l := lexer.New(line)
+		l := lexer.New(line, "REPL")
 		p := parser.New(l)
 
 		program := p.ParseProgram()
