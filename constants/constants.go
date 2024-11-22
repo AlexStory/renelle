@@ -12,4 +12,6 @@ var (
 	ERROR = &object.Atom{Value: "error"}
 	CONT  = &object.Atom{Value: "cont"}
 	HALT  = &object.Atom{Value: "halt"}
+	SOME  = &object.Atom{Value: "some"}
+	NONE  = &object.Atom{Value: "none"}
 )

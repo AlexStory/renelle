@@ -2,6 +2,7 @@ package hostlib
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"renelle/constants"
@@ -288,6 +289,50 @@ func StringStartsWith(ctx *object.EvalContext, args ...object.Object) object.Obj
 	}
 
 	return &object.Boolean{Value: strings.HasPrefix(str.Value, substr.Value)}
+}
+
+// Converts a string to a number
+func StringParseNum(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 1 {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "to_num() takes exactly 1 argument"}
+	}
+
+	str, ok := args[0].(*object.String)
+	if !ok {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "to_num() requires a string"}
+	}
+
+	if i, err := strconv.ParseInt(str.Value, 10, 64); err == nil {
+		return &object.Integer{Value: i}
+	}
+
+	if f, err := strconv.ParseFloat(str.Value, 64); err == nil {
+		return &object.Float{Value: f}
+	}
+
+	return constants.NIL
+}
+
+// StringTryParseNum tries to parse a string and returns either a tuple of (:some, result) or :none
+func StringTryParseNum(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 1 {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "try_parse_num() takes exactly 1 argument"}
+	}
+
+	str, ok := args[0].(*object.String)
+	if !ok {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "try_parse_num() requires a string"}
+	}
+
+	if i, err := strconv.ParseInt(str.Value, 10, 64); err == nil {
+		return &object.Tuple{Elements: []object.Object{constants.SOME, &object.Integer{Value: i}}}
+	}
+
+	if f, err := strconv.ParseFloat(str.Value, 64); err == nil {
+		return &object.Tuple{Elements: []object.Object{constants.SOME, &object.Float{Value: f}}}
+	}
+
+	return constants.NONE
 }
 
 // StringTrim trims a string.

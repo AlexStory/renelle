@@ -1332,6 +1332,7 @@ func loadModuleFromEmbedFS(ctx *object.EvalContext, fs embed.FS, modulePath stri
 			module.Environment.Set("match?", &object.Builtin{Fn: hostlib.StringMatch})
 			module.Environment.Set("pad_left", &object.Builtin{Fn: hostlib.StringPadLeft})
 			module.Environment.Set("pad_right", &object.Builtin{Fn: hostlib.StringPadRight})
+			module.Environment.Set("parse_num", &object.Builtin{Fn: hostlib.StringParseNum})
 			module.Environment.Set("replace", &object.Builtin{Fn: hostlib.StringReplace})
 			module.Environment.Set("replace_all", &object.Builtin{Fn: hostlib.StringReplaceAll})
 			module.Environment.Set("split", &object.Builtin{Fn: hostlib.StringSplit})
@@ -1339,6 +1340,7 @@ func loadModuleFromEmbedFS(ctx *object.EvalContext, fs embed.FS, modulePath stri
 			module.Environment.Set("trim", &object.Builtin{Fn: hostlib.StringTrim})
 			module.Environment.Set("trim_end", &object.Builtin{Fn: hostlib.StringTrimEnd})
 			module.Environment.Set("trim_start", &object.Builtin{Fn: hostlib.StringTrimStart})
+			module.Environment.Set("try_parse_num", &object.Builtin{Fn: hostlib.StringTryParseNum})
 			module.Environment.Set("upper", &object.Builtin{Fn: hostlib.StringUpper})
 		}
 		return module
