@@ -243,6 +243,10 @@ func Eval(node ast.Node, env *object.Environment, ctx *object.EvalContext) objec
 				if condition.Value == "_" {
 					newEnv := object.NewEnclosedEnvironment(env)
 					return Eval(node.Consequences[i], newEnv, ctx)
+				} else {
+					newEnv := object.NewEnclosedEnvironment(env)
+					newEnv.Set(condition.Value, testVal)
+					return Eval(node.Consequences[i], newEnv, ctx)
 				}
 			case *ast.TupleLiteral:
 				ctx.Line = node.Token.Line
@@ -1307,9 +1311,11 @@ func loadModuleFromEmbedFS(ctx *object.EvalContext, fs embed.FS, modulePath stri
 			module.Environment.Set("write", &object.Builtin{Fn: hostlib.FileWrite})
 			module.Environment.Set("write!", &object.Builtin{Fn: hostlib.FileWriteBang})
 		case "Map":
+			module.Environment.Set("get", &object.Builtin{Fn: hostlib.MapGet})
 			module.Environment.Set("has_key?", &object.Builtin{Fn: hostlib.MapHasKey})
 			module.Environment.Set("keys", &object.Builtin{Fn: hostlib.MapKeys})
 			module.Environment.Set("length", &object.Builtin{Fn: hostlib.MapLength})
+			module.Environment.Set("try_get", &object.Builtin{Fn: hostlib.MapTryGet})
 		case "Math":
 			module.Environment.Set("abs", &object.Builtin{Fn: hostlib.MathAbs})
 			module.Environment.Set("ceiling", &object.Builtin{Fn: hostlib.MathCeil})

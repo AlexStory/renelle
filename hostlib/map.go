@@ -55,3 +55,41 @@ func MapLength(ctx *object.EvalContext, args ...object.Object) object.Object {
 
 	return &object.Integer{Value: int64(m.Store.Length)}
 }
+
+func MapGet(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "get() takes exactly 2 arguments"}
+	}
+
+	m, ok := args[0].(*object.Map)
+	if !ok {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "get() requires a map"}
+	}
+
+	key := args[1]
+	value, ok := m.Store.Get(key)
+	if !ok {
+		return constants.NIL
+	}
+
+	return value
+}
+
+func MapTryGet(ctx *object.EvalContext, args ...object.Object) object.Object {
+	if len(args) != 2 {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "try_get() takes exactly 2 arguments"}
+	}
+
+	m, ok := args[0].(*object.Map)
+	if !ok {
+		return &object.Error{FileName: ctx.FileName, Line: ctx.Line, Column: ctx.Column, Message: "try_get() requires a map"}
+	}
+
+	key := args[1]
+	value, ok := m.Store.Get(key)
+	if !ok {
+		return constants.NONE
+	}
+
+	return &object.Tuple{Elements: []object.Object{constants.SOME, value}}
+}
