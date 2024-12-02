@@ -1491,6 +1491,77 @@ func TestCaseExpression(t *testing.T) {
 		t.Fatalf("consequences does not contain 2 consequences. got=%d", len(caseExpr.Consequences))
 	}
 }
+func TestMultilineCaseExpression(t *testing.T) {
+	input := `
+    case x {
+        n => {
+            let x = n + 2
+            print(x)
+        }
+    }
+    `
+
+	l := lexer.New(input, "test")
+	p := New(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain 1 statement. got=%d", len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+	}
+
+	caseExpr, ok := stmt.Expression.(*ast.CaseExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.CaseExpression. got=%T", stmt.Expression)
+	}
+
+	if len(caseExpr.Conditions) != 1 {
+		t.Fatalf("conditions does not contain 1 condition. got=%d", len(caseExpr.Conditions))
+	}
+
+	if len(caseExpr.Consequences) != 1 {
+		t.Fatalf("consequences does not contain 1 consequence. got=%d", len(caseExpr.Consequences))
+	}
+
+	condition := caseExpr.Conditions[0]
+	if condition.String() != "n" {
+		t.Fatalf("condition is not 'n'. got=%s", condition.String())
+	}
+
+	consequence := caseExpr.Consequences[0]
+
+	if len(consequence.Statements) != 2 {
+		t.Fatalf("consequence does not contain 2 statements. got=%d", len(consequence.Statements))
+	}
+
+	letStmt, ok := consequence.Statements[0].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("consequence.Statements[0] is not ast.LetStatement. got=%T", consequence.Statements[0])
+	}
+
+	if letStmt.Left.TokenLiteral() != "x" {
+		t.Fatalf("letStmt.Name.Value is not 'x'. got=%s", letStmt.TokenLiteral())
+	}
+
+	if letStmt.Value.String() != "(n + 2)" {
+		t.Fatalf("letStmt.Value is not '(n + 2)'. got=%s", letStmt.Value.String())
+	}
+
+	exprStmt, ok := consequence.Statements[1].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("consequence.Statements[1] is not ast.ExpressionStatement. got=%T", consequence.Statements[1])
+	}
+
+	if exprStmt.Expression.String() != "print(x)" {
+		t.Fatalf("exprStmt.Expression is not 'print(x)'. got=%s", exprStmt.Expression.String())
+	}
+}
 
 func TestParseModuleIdentifier(t *testing.T) {
 	input := "MyApp.MyModule.MySubmodule"

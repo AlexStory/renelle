@@ -591,7 +591,7 @@ func (p *Parser) parseCaseExpression() ast.Expression {
 
 		p.nextToken()
 
-		if p.peekTokenIs(token.LBRACE) {
+		if p.curTokenIs(token.LBRACE) {
 			consequence := p.parseBlockStatement()
 			expression.Consequences = append(expression.Consequences, consequence)
 		} else {

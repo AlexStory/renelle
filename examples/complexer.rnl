@@ -1,0 +1,29 @@
+fn is_safe(nums) {
+    Array.reduce(line, (:nil, :nil), \acc next => {
+        case acc {
+            (:nil, :nil) => (:nil, next)
+            (:nil, :false) => (:nil, :false)
+            (:nil, prev) => {
+                cond {
+                    prev > next and prev < (next + 4) => (:asc, next)
+                    prev < next and prev > (next - 4) => (:desc, next)
+                    true => (:nil, :false)
+                }
+            }
+            (:asc, prev) => {
+                cond {
+                    prev < next => (:asc, next)
+                    true => (:nil, :false)
+                }
+            }
+            (:desc, prev) => {
+                cond {
+                    prev > next => (:desc, next)
+                    true => (:nil, :false)
+                }
+            }
+        }
+    })
+}
+
+print(is_safe([1 2 3]))
