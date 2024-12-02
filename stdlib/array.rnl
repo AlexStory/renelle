@@ -33,6 +33,17 @@ fn average(array) {
     sum(array) / (len(array) * 1.0)
 }
 
+# returns a new array, with all non-:none results of applying the given function to each element
+fn choose(array, f) {
+    Array.reduce(array, [], \acc x => {
+        let result = f(x)
+        case result {
+            (:some, res) => push(acc, res)
+            :none => acc
+        }
+    })
+}
+
 # returns the all the elements of two arrays combined in a new array
 fn concat(array1 array2) {
     Array.reduce(array2, array1, \acc x => push(acc, x))
